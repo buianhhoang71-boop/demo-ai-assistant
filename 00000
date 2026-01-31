@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<body style="margin:0; background:#222; display:flex; justify-content:center; align-items:center; height:100vh;">
+    <div style="text-align:center;">
+        <canvas id="gameCanvas" width="400" height="400" style="border:2px solid white;"></canvas>
+        <br>
+        <button onclick="quayGacha()" style="padding:10px 20px; margin-top:10px; cursor:pointer;">QUAY GACHA!</button>
+        <p id="ketqua" style="color:white; font-family:sans-serif; font-size:20px;"></p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        let x = 175, y = 175; // Vị trí hình vuông
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "cyan"; // Nhân vật tạm thời là hình vuông xanh
+            ctx.fillRect(x, y, 50, 50);
+            requestAnimationFrame(draw);
+        }
+
+        function quayGacha() {
+            const tiLe = Math.random() * 100;
+            const thongBao = document.getElementById("ketqua");
+            if (tiLe <= 5) thongBao.innerText = "⭐ SSR: SIÊU HIẾM!";
+            else if (tiLe <= 20) thongBao.innerText = "✨ SR: HIẾM";
+            else thongBao.innerText = "👟 R: THƯỜNG";
+        }
+
+        // Di chuyển bằng phím (nếu bạn dùng bàn phím)
+        window.addEventListener("keydown", (e) => {
+            if(e.key === "ArrowUp") y -= 10;
+            if(e.key === "ArrowDown") y += 10;
+            if(e.key === "ArrowLeft") x -= 10;
+            if(e.key === "ArrowRight") x += 10;
+        });
+
+        draw();
+    </script>
+</body>
+</html>
