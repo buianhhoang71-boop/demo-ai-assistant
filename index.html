@@ -118,3 +118,20 @@ gameLoop();
 </script>
 </body>
 </html>
+function summon() {
+    const result = summonGemini();
+    maidens.push({
+        x: Math.random() * 300 + 50,
+        y: ground.y - 30,
+        name: result.name + " [" + result.rarity + "]",
+        color: result.color
+    });
+}function summon() {
+    const result = summonGemini();
+    maidens.push({
+        x: Math.random() * 300 + 50,
+        y: ground.y - 30,
+        name: result.name + " [" + result.rarity + "]",
+        color: result.color
+    });
+}
