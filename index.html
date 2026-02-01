@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Halo Maidens: Jump & Summon</title>
+    <style>
+        body { margin: 0; background: #1a0a1a; color: white; text-align: center; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        canvas { display: block; margin: 10px auto; background: #87CEEB; border: 3px solid #ff66b2; max-width: 95%; height: auto; border-radius: 10px; }
+        .controls { display: grid; grid-template-columns: repeat(3, 80px); gap: 10px; justify-content: center; margin-top: 10px; }
+        .btn { width: 80px; height: 80px; background: rgba(255,102,178,0.3); border: 2px solid #ff66b2; color: white; border-radius: 50%; font-size: 30px; display: flex; align-items: center; justify-content: center; user-select: none; }
+        .btn:active { background: #ff3399; }
+        .btn-summon { background: gold; color: black; border: none; font-weight: bold; font-size: 16px; border-radius: 15px; }
+    </style>
+</head>
+<body>
+
+<h3 style="margin:5px; color:#ff66b2;">🌸 HALO MAIDENS: JUMP 🌸</h3>
+<canvas id="game"></canvas>
+
+<div class="controls">
+    <div class="btn" ontouchstart="move('left')" ontouchend="stop()">◀</div>
+    <div class="btn btn-summon" onclick="summon()">SUMMON</div>
+    <div class="btn" ontouchstart="move('right')" ontouchend="stop()">▶</div>
+    <div></div>
+    <div class="btn" style="background: #3366ff;" ontouchstart="jump()">JUMP</div>
+    <div></div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = 400; canvas.height = 300;
+
+// THỪA KẾ TỪ CHATGPT: Trọng lực và Nhảy
+const gravity = 0.6;
+const player = {
+    x: 50, y: 200, w: 30, h: 30,
+    speed: 5, velY: 0, dx: 0,
+    jumpPower: 12, onGround: false
+};
+
+const ground = { y: 260, h: 40 };
+let maidens = [];
+
+function summon() {
+    const names = ["Lily", "Rose", "Mina"];
+    maidens.push({
+        x: Math.random() * 300 + 50,
+        y: ground.y - 30, // Đứng trên mặt đất
+        name: names[Math.floor(Math.random() * names.length)],
+        color: "#ff66b2"
+    });
+}
+
+function move(dir) {
+    if(dir === 'left') player.dx = -player.speed;
+    if(dir === 'right') player.dx = player.speed;
+}
+
+function stop() { player.dx = 0; }
+
+function jump() {
+    if(player.onGround) {
+        player.velY = -player.jumpPower;
+        player.onGround = false;
+    }
+}
+
+function update() {
+    // Di chuyển trái phải
+    player.x += player.dx;
+    
+    // Áp dụng trọng lực (Từ ChatGPT)
+    player.velY += gravity;
+    player.y += player.velY;
+
+    // Chặn biên
+    player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+
+    // Va chạm mặt đất (Từ ChatGPT)
+    if (player.y + player.h >= ground.y) {
+        player.y = ground.y - player.h;
+        player.velY = 0;
+        player.onGround = true;
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Vẽ mặt đất
+    ctx.fillStyle = "#4a2c5a";
+    ctx.fillRect(0, ground.y, canvas.width, ground.h);
+
+    // Vẽ Master
+    ctx.fillStyle = "#00ccff";
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+
+    // Vẽ dàn Maiden
+    maidens.forEach(m => {
+        ctx.fillStyle = m.color;
+        ctx.beginPath();
+        ctx.arc(m.x + 15, m.y + 15, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "white";
+        ctx.font = "10px Arial";
+        ctx.fillText(m.name, m.x, m.y - 5);
+    });
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+gameLoop();
+</script>
+</body>
+</html>
