@@ -136,5 +136,72 @@ function gameLoop() {
 }
 gameLoop();
 </script>
+
 </body>
 </html>
+if ((keys["KeyZ"] || mobile.attack) && player.attackCooldown <= 0) {
+    player.attacking = true;
+    player.attackCooldown = 20;
+
+    if (enemy.alive && hit(player, enemy)) {
+        enemy.hp--;
+        if (enemy.hp <= 0) enemy.alive = false;
+    }
+}if ((keys["Space"] || keys["ArrowUp"] || mobile.jump) && player.onGround) {
+    player.velY = -12;
+    player.onGround = false;
+}if (keys["ArrowLeft"] || keys["KeyA"] || mobile.left) player.x -= player.speed;
+if (keys["ArrowRight"] || keys["KeyD"] || mobile.right) player.x += player.speed;// ===== MOBILE INPUT =====
+let mobile = {
+    left: false,
+    right: false,
+    jump: false,
+    attack: false
+};
+
+const bindBtn = (id, action) => {
+    const btn = document.getElementById(id);
+    btn.addEventListener("touchstart", e => {
+        e.preventDefault();
+        mobile[action] = true;
+    });
+    btn.addEventListener("touchend", e => {
+        e.preventDefault();
+        mobile[action] = false;
+    });
+};
+
+bindBtn("btnLeft", "left");
+bindBtn("btnRight", "right");
+bindBtn("btnJump", "jump");
+bindBtn("btnAttack", "attack");#mobileControls button {
+    width: 70px;
+    height: 70px;
+    margin: 5px;
+    font-size: 26px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 102, 178, 0.8);
+    color: white;
+}
+#mobileControls button:active {
+    background: #ff3399;
+}<div id="mobileControls" style="
+    position: fixed;
+    bottom: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-sizing: border-box;
+    touch-action: none;
+">
+    <div>
+        <button id="btnLeft">◀</button>
+        <button id="btnRight">▶</button>
+    </div>
+    <div>
+        <button id="btnJump">⤴</button>
+        <button id="btnAttack">⚔</button>
+    </div>
+</div>
