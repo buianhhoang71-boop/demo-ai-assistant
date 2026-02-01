@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Game Đánh Quái 3D - Di Chuyển Tự Do</title>
+    <title>Game Đánh Quái 3D - Di Chuyển & Chiến Đấu</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
-            touch-action: none;
         }
         
         body {
@@ -20,7 +19,7 @@
             overflow: hidden;
             width: 100vw;
             height: 100vh;
-            position: fixed;
+            touch-action: none;
         }
         
         #gameContainer {
@@ -45,30 +44,46 @@
             z-index: 10;
         }
         
-        /* Thông tin người chơi */
-        .player-info {
+        /* Player Stats */
+        .player-stats {
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             padding: 15px;
             border-radius: 10px;
             border: 2px solid #3498db;
             pointer-events: auto;
-            min-width: 200px;
+            min-width: 220px;
         }
         
-        .player-info h3 {
+        .player-stats h3 {
             color: #3498db;
             margin-bottom: 10px;
             font-size: 1.2rem;
         }
         
-        .stat-bar {
-            height: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
+        .stat-row {
+            display: flex;
+            align-items: center;
             margin: 8px 0;
+        }
+        
+        .stat-label {
+            width: 80px;
+            font-size: 0.9rem;
+        }
+        
+        .stat-value {
+            flex: 1;
+            font-weight: bold;
+        }
+        
+        .stat-bar {
+            flex: 2;
+            height: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
             overflow: hidden;
             position: relative;
         }
@@ -76,12 +91,14 @@
         .health-bar {
             background: linear-gradient(to right, #e74c3c, #2ecc71);
             height: 100%;
+            width: 100%;
             transition: width 0.3s ease;
         }
         
         .mana-bar {
             background: linear-gradient(to right, #2980b9, #3498db);
             height: 100%;
+            width: 100%;
             transition: width 0.3s ease;
         }
         
@@ -94,19 +111,26 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             font-weight: bold;
             color: white;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
         }
         
-        /* Điều khiển di chuyển */
+        /* Movement Controls - Fixed */
         .movement-controls {
             position: absolute;
-            bottom: 120px;
+            bottom: 130px;
             left: 20px;
-            width: 160px;
-            height: 160px;
+            width: 150px;
+            height: 150px;
+            pointer-events: none;
+        }
+        
+        .joystick-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
             pointer-events: auto;
         }
         
@@ -116,7 +140,7 @@
             background: rgba(0, 0, 0, 0.5);
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.3);
-            position: relative;
+            position: absolute;
         }
         
         .joystick-handle {
@@ -129,21 +153,27 @@
             left: 50%;
             transform: translate(-50%, -50%);
             border: 2px solid rgba(255, 255, 255, 0.5);
-            cursor: move;
+            pointer-events: none;
         }
         
-        /* Điều khiển chiến đấu */
+        /* Combat Controls - Fixed */
         .combat-controls {
             position: absolute;
-            bottom: 120px;
+            bottom: 130px;
             right: 20px;
             display: flex;
             flex-direction: column;
             gap: 15px;
-            pointer-events: auto;
+            pointer-events: none;
         }
         
-        .combat-btn {
+        .combat-row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .action-btn {
             width: 80px;
             height: 80px;
             border-radius: 50%;
@@ -156,121 +186,148 @@
             align-items: center;
             justify-content: center;
             transition: all 0.2s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
             user-select: none;
         }
         
-        .combat-btn:active {
+        .action-btn:active {
             transform: scale(0.9);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
         }
         
         .attack-btn {
-            background: linear-gradient(to bottom, #e74c3c, #c0392b);
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
         }
         
         .magic-btn {
-            background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
         }
         
         .jump-btn {
-            background: linear-gradient(to bottom, #2ecc71, #27ae60);
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            width: 100%;
         }
         
-        /* Mini map */
-        .mini-map {
+        /* Enemy Info */
+        .enemy-info {
             position: absolute;
             top: 20px;
             right: 20px;
-            width: 150px;
-            height: 150px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
             border-radius: 10px;
-            border: 2px solid #2ecc71;
-            overflow: hidden;
+            border: 2px solid #e74c3c;
             pointer-events: auto;
+            min-width: 200px;
         }
         
-        .mini-map-canvas {
-            width: 100%;
-            height: 100%;
-        }
-        
-        /* Thông báo */
-        .notification {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 20px 30px;
-            border-radius: 10px;
-            border: 3px solid #ff9a00;
-            text-align: center;
-            max-width: 80%;
-            z-index: 20;
-            display: none;
-        }
-        
-        .notification h2 {
-            color: #ff9a00;
+        .enemy-info h3 {
+            color: #e74c3c;
             margin-bottom: 10px;
-            font-size: 1.8rem;
+            font-size: 1.2rem;
         }
         
-        .restart-btn {
-            background: linear-gradient(to bottom, #ff9a00, #ff6f00);
-            border: none;
-            color: white;
-            padding: 12px 25px;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 25px;
-            cursor: pointer;
-            margin-top: 15px;
-        }
-        
-        /* Thanh công cụ */
-        .toolbar {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            pointer-events: auto;
-        }
-        
-        .toolbar-btn {
-            background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #3498db;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-        }
-        
-        .toolbar-btn:active {
-            background: rgba(52, 152, 219, 0.3);
-        }
-        
-        /* Hướng dẫn */
-        .instructions {
+        /* Game Messages */
+        .message-log {
             position: absolute;
             bottom: 20px;
             left: 200px;
+            right: 200px;
             background: rgba(0, 0, 0, 0.7);
             padding: 10px;
             border-radius: 8px;
-            font-size: 0.8rem;
-            color: #ccc;
-            max-width: 250px;
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 0.9rem;
             pointer-events: auto;
         }
         
-        /* Loading screen */
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 4px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .player-msg {
+            background: rgba(52, 152, 219, 0.2);
+            border-left: 3px solid #3498db;
+        }
+        
+        .enemy-msg {
+            background: rgba(231, 76, 60, 0.2);
+            border-left: 3px solid #e74c3c;
+        }
+        
+        .info-msg {
+            background: rgba(46, 204, 113, 0.2);
+            border-left: 3px solid #2ecc71;
+        }
+        
+        /* Game Over Screen */
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            pointer-events: auto;
+        }
+        
+        .game-over h2 {
+            font-size: 3rem;
+            color: #ff9a00;
+            margin-bottom: 20px;
+        }
+        
+        .game-over p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+        
+        .restart-btn {
+            background: linear-gradient(135deg, #ff9a00, #ff6f00);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .restart-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Damage Effect */
+        .damage-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(231, 76, 60, 0.3);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 5;
+        }
+        
+        /* Loading Screen */
         .loading-screen {
             position: fixed;
             top: 0;
@@ -285,25 +342,49 @@
             z-index: 100;
         }
         
-        .loading-bar-container {
+        .loading-text {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #3498db;
+        }
+        
+        .loading-bar {
             width: 300px;
             height: 20px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
-            margin-top: 20px;
             overflow: hidden;
         }
         
-        .loading-bar {
+        .loading-progress {
             height: 100%;
             background: linear-gradient(to right, #3498db, #2ecc71);
             width: 0%;
             transition: width 0.3s ease;
         }
         
-        /* Cho desktop */
-        @media (min-width: 768px) {
-            .joystick-base {
+        /* Controls Info */
+        .controls-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            max-width: 180px;
+            pointer-events: auto;
+        }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            .player-stats,
+            .enemy-info {
+                min-width: 160px;
+                padding: 10px;
+            }
+            
+            .movement-controls {
                 width: 120px;
                 height: 120px;
             }
@@ -313,109 +394,209 @@
                 height: 50px;
             }
             
-            .combat-btn {
+            .action-btn {
                 width: 70px;
                 height: 70px;
+                font-size: 1.3rem;
+            }
+            
+            .message-log {
+                left: 20px;
+                right: 20px;
+                bottom: 300px;
+                max-height: 80px;
+            }
+            
+            .controls-info {
+                display: none;
             }
         }
         
-        /* Hiệu ứng damage */
-        .damage-effect {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(231, 76, 60, 0.3);
-            z-index: 5;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
+        @media (max-width: 480px) {
+            .player-stats,
+            .enemy-info {
+                position: static;
+                width: calc(50% - 10px);
+                margin: 10px 5px;
+                display: inline-block;
+            }
+            
+            .player-stats {
+                margin-left: 10px;
+            }
+            
+            .enemy-info {
+                margin-right: 10px;
+                float: right;
+            }
+            
+            .movement-controls {
+                bottom: 180px;
+                left: 10px;
+                width: 100px;
+                height: 100px;
+            }
+            
+            .combat-controls {
+                bottom: 180px;
+                right: 10px;
+            }
+            
+            .action-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 1.1rem;
+            }
+            
+            .message-log {
+                bottom: 350px;
+                max-height: 60px;
+                font-size: 0.8rem;
+            }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
 </head>
 <body>
     <div id="gameContainer"></div>
     
     <div class="loading-screen" id="loadingScreen">
-        <h2>Đang tải Game Đánh Quái 3D...</h2>
-        <div class="loading-bar-container">
-            <div class="loading-bar" id="loadingBar"></div>
+        <div class="loading-text" id="loadingText">Đang tải game...</div>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loadingProgress"></div>
         </div>
-        <p id="loadingText">Khởi tạo thế giới 3D...</p>
     </div>
     
     <div class="ui-overlay">
-        <div class="player-info">
+        <div class="player-stats">
             <h3>NHÂN VẬT</h3>
-            <div>HP: <span id="hpText">100/100</span></div>
-            <div class="stat-bar">
-                <div class="health-bar" id="healthBar"></div>
-                <div class="bar-text" id="healthText">100/100</div>
+            <div class="stat-row">
+                <div class="stat-label">HP:</div>
+                <div class="stat-value" id="hpText">100/100</div>
             </div>
-            <div>Mana: <span id="manaText">50/50</span></div>
-            <div class="stat-bar">
-                <div class="mana-bar" id="manaBar"></div>
-                <div class="bar-text" id="manaText">50/50</div>
+            <div class="stat-row">
+                <div class="stat-label"></div>
+                <div class="stat-bar">
+                    <div class="health-bar" id="healthBar"></div>
+                    <div class="bar-text" id="healthText">100/100</div>
+                </div>
             </div>
-            <div>Cấp: <span id="levelText">1</span></div>
-            <div>Vàng: <span id="goldText">0</span></div>
-            <div>Quái vật: <span id="killText">0</span></div>
+            <div class="stat-row">
+                <div class="stat-label">Mana:</div>
+                <div class="stat-value" id="manaText">50/50</div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label"></div>
+                <div class="stat-bar">
+                    <div class="mana-bar" id="manaBar"></div>
+                    <div class="bar-text" id="manaTextValue">50/50</div>
+                </div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label">Cấp:</div>
+                <div class="stat-value" id="levelText">1</div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label">Vàng:</div>
+                <div class="stat-value" id="goldText">0</div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label">Quái:</div>
+                <div class="stat-value" id="killText">0</div>
+            </div>
         </div>
         
-        <div class="movement-controls" id="movementControls">
-            <div class="joystick-base">
+        <div class="enemy-info">
+            <h3>QUÁI VẬT</h3>
+            <div class="stat-row">
+                <div class="stat-label">Loại:</div>
+                <div class="stat-value" id="enemyType">Goblin</div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label">HP:</div>
+                <div class="stat-value" id="enemyHpText">50/50</div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label"></div>
+                <div class="stat-bar">
+                    <div class="health-bar" id="enemyHealthBar"></div>
+                    <div class="bar-text" id="enemyHealthText">50/50</div>
+                </div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label">Khoảng cách:</div>
+                <div class="stat-value" id="enemyDistance">0m</div>
+            </div>
+        </div>
+        
+        <div class="movement-controls">
+            <div class="joystick-container" id="joystickContainer">
+                <div class="joystick-base"></div>
                 <div class="joystick-handle" id="joystickHandle"></div>
             </div>
         </div>
         
         <div class="combat-controls">
-            <button class="combat-btn jump-btn" id="jumpBtn">↑</button>
-            <div style="display: flex; gap: 15px;">
-                <button class="combat-btn magic-btn" id="magicBtn">✨</button>
-                <button class="combat-btn attack-btn" id="attackBtn">⚔️</button>
+            <div class="combat-row">
+                <button class="action-btn magic-btn" id="magicBtn">
+                    <div style="font-size: 1.8rem;">✨</div>
+                </button>
+                <button class="action-btn attack-btn" id="attackBtn">
+                    <div style="font-size: 1.8rem;">⚔️</div>
+                </button>
+            </div>
+            <div class="combat-row">
+                <button class="action-btn jump-btn" id="jumpBtn">
+                    <div style="font-size: 1.8rem;">↑</div>
+                </button>
             </div>
         </div>
         
-        <div class="mini-map">
-            <canvas class="mini-map-canvas" id="miniMapCanvas" width="150" height="150"></canvas>
+        <div class="message-log" id="messageLog">
+            <div class="message info-msg">Chào mừng đến với game Đánh Quái 3D!</div>
+            <div class="message info-msg">Di chuyển bằng joystick và tấn công quái vật!</div>
         </div>
         
-        <div class="toolbar">
-            <button class="toolbar-btn" id="healBtn">Hồi phục (H)</button>
-            <button class="toolbar-btn" id="nextEnemyBtn">Quái tiếp (N)</button>
-            <button class="toolbar-btn" id="toggleSoundBtn">Âm thanh: Bật</button>
-        </div>
-        
-        <div class="instructions">
+        <div class="controls-info">
             <strong>Điều khiển:</strong><br>
             • Kéo joystick để di chuyển<br>
-            • Chạm nút để tấn công/nhảy<br>
-            • Desktop: WASD để di chuyển, Space nhảy, Click chuột tấn công
+            • Nút ⚔️: Tấn công<br>
+            • Nút ✨: Phép thuật<br>
+            • Nút ↑: Nhảy<br>
+            • Desktop: WASD di chuyển, Click tấn công
         </div>
         
-        <div class="notification" id="notification">
-            <h2 id="notificationTitle">Thông báo</h2>
-            <p id="notificationText"></p>
-            <button class="restart-btn" id="restartBtn">Chơi lại</button>
-        </div>
+        <div class="damage-overlay" id="damageOverlay"></div>
         
-        <div class="damage-effect" id="damageEffect"></div>
+        <div class="game-over" id="gameOverScreen">
+            <h2>GAME OVER</h2>
+            <p id="gameOverStats">Bạn đã tiêu diệt <span id="finalKills">0</span> quái vật!</p>
+            <button class="restart-btn" id="restartBtn">CHƠI LẠI</button>
+        </div>
     </div>
 
     <script>
-        // Các biến toàn cục
-        let scene, camera, renderer, controls;
-        let player, enemies = [];
-        let terrain, skybox;
+        // ================ KHAI BÁO BIẾN ================
+        let scene, camera, renderer;
+        let player, playerMixer;
+        let enemies = [];
+        let enemyMixers = [];
         let clock = new THREE.Clock();
-        let keys = {};
-        let joystickActive = false;
-        let joystickVector = new THREE.Vector2();
         
-        // Trạng thái game
+        // Di chuyển
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+        
+        // Joystick
+        let joystickActive = false;
+        let joystickVector = new THREE.Vector2(0, 0);
+        let joystickStartPos = null;
+        
+        // Game state
         let gameState = {
             player: {
                 hp: 100,
@@ -423,27 +604,35 @@
                 mana: 50,
                 maxMana: 50,
                 level: 1,
-                gold: 0,
-                kills: 0,
                 exp: 0,
                 expToNextLevel: 100,
+                gold: 0,
+                kills: 0,
                 damage: 15,
                 magicDamage: 25,
-                speed: 5
+                speed: 0.15,
+                jumpForce: 8,
+                isJumping: false,
+                canJump: true
             },
-            enemies: [],
+            currentEnemy: null,
             gameOver: false,
-            soundEnabled: true
+            attackCooldown: 0,
+            magicCooldown: 0
         };
         
-        // Tải assets
-        let assetsLoaded = 0;
-        let totalAssets = 10;
+        // Effects
+        let attackEffects = [];
+        let magicEffects = [];
+        let enemyAttackEffects = [];
         
-        // Khởi tạo game
+        // ================ KHỞI TẠO GAME ================
         function init() {
+            updateLoading("Đang khởi tạo scene...");
+            
             // Tạo scene
             scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
             scene.fog = new THREE.Fog(0x87ceeb, 10, 100);
             
             // Tạo camera
@@ -457,80 +646,70 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.getElementById('gameContainer').appendChild(renderer.domElement);
             
-            // Thêm ánh sáng
-            addLighting();
+            updateLoading("Đang thêm ánh sáng...", 20);
+            setupLights();
             
-            // Tạo terrain
+            updateLoading("Đang tạo địa hình...", 40);
             createTerrain();
             
-            // Tạo skybox
-            createSkybox();
-            
-            // Tạo player
+            updateLoading("Đang tạo nhân vật...", 60);
             createPlayer();
             
-            // Tạo quái vật ban đầu
-            for (let i = 0; i < 5; i++) {
-                createEnemy();
-            }
+            updateLoading("Đang tạo quái vật...", 80);
+            createEnemies(5);
             
-            // Tạo items
-            createItems();
-            
-            // Thêm điều khiển
+            updateLoading("Đang thiết lập điều khiển...", 95);
             setupControls();
             
-            // Thêm sự kiện
-            setupEventListeners();
-            
-            // Bắt đầu game loop
-            animate();
+            updateLoading("Sẵn sàng!", 100);
             
             // Ẩn loading screen
             setTimeout(() => {
                 document.getElementById('loadingScreen').style.display = 'none';
-                showNotification("Game Đánh Quái 3D", "Di chuyển và tiêu diệt quái vật!");
+                addMessage("Game bắt đầu! Di chuyển và tiêu diệt quái vật!", "info");
             }, 500);
+            
+            // Bắt đầu game loop
+            animate();
         }
         
-        // Thêm ánh sáng
-        function addLighting() {
-            updateLoading("Đang thêm ánh sáng...");
-            
-            // Ánh sáng mặt trời
+        // ================ SETUP LIGHTS ================
+        function setupLights() {
+            // Directional light (mặt trời)
             const sunLight = new THREE.DirectionalLight(0xffffff, 1);
             sunLight.position.set(50, 50, 50);
             sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 500;
             sunLight.shadow.camera.left = -50;
             sunLight.shadow.camera.right = 50;
             sunLight.shadow.camera.top = 50;
             sunLight.shadow.camera.bottom = -50;
-            sunLight.shadow.mapSize.width = 2048;
-            sunLight.shadow.mapSize.height = 2048;
             scene.add(sunLight);
             
-            // Ánh sáng môi trường
+            // Ambient light
             const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
             scene.add(ambientLight);
             
-            assetsLoaded++;
-            updateLoadingBar();
+            // Hemisphere light
+            const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x3d7c47, 0.3);
+            scene.add(hemisphereLight);
         }
         
-        // Tạo terrain
+        // ================ TẠO ĐỊA HÌNH ================
         function createTerrain() {
-            updateLoading("Đang tạo địa hình...");
-            
             // Tạo mặt đất
             const groundGeometry = new THREE.PlaneGeometry(200, 200, 50, 50);
             
-            // Thêm độ cao ngẫu nhiên
+            // Tạo độ cao cho địa hình
             const vertices = groundGeometry.attributes.position.array;
             for (let i = 0; i < vertices.length; i += 3) {
                 const x = vertices[i];
                 const z = vertices[i + 2];
                 const distance = Math.sqrt(x * x + z * z);
-                const height = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 2;
+                const height = Math.sin(x * 0.05) * Math.cos(z * 0.05) * 3;
                 vertices[i + 1] = height;
             }
             groundGeometry.computeVertexNormals();
@@ -540,466 +719,697 @@
                 side: THREE.DoubleSide 
             });
             
-            terrain = new THREE.Mesh(groundGeometry, groundMaterial);
-            terrain.rotation.x = -Math.PI / 2;
-            terrain.receiveShadow = true;
-            scene.add(terrain);
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
             
             // Thêm cỏ
-            for (let i = 0; i < 100; i++) {
-                const grassGeometry = new THREE.ConeGeometry(0.2, 1, 3);
+            for (let i = 0; i < 200; i++) {
+                const grassGeometry = new THREE.ConeGeometry(0.1, 0.5, 3);
                 const grassMaterial = new THREE.MeshLambertMaterial({ color: 0x4caf50 });
                 const grass = new THREE.Mesh(grassGeometry, grassMaterial);
                 
                 grass.position.set(
                     (Math.random() - 0.5) * 180,
-                    0.5,
+                    0.25,
                     (Math.random() - 0.5) * 180
                 );
                 grass.rotation.x = Math.random() * Math.PI;
+                grass.castShadow = true;
                 scene.add(grass);
             }
             
-            assetsLoaded++;
-            updateLoadingBar();
+            // Thêm cây
+            for (let i = 0; i < 50; i++) {
+                createTree(
+                    (Math.random() - 0.5) * 180,
+                    0,
+                    (Math.random() - 0.5) * 180
+                );
+            }
         }
         
-        // Tạo skybox
-        function createSkybox() {
-            updateLoading("Đang tạo bầu trời...");
+        function createTree(x, y, z) {
+            // Thân cây
+            const trunkGeometry = new THREE.CylinderGeometry(0.3, 0.4, 3, 8);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.set(x, y + 1.5, z);
+            trunk.castShadow = true;
+            scene.add(trunk);
             
-            const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
-            const skyMaterial = new THREE.MeshBasicMaterial({
-                color: 0x87ceeb,
-                side: THREE.BackSide
-            });
-            
-            skybox = new THREE.Mesh(skyGeometry, skyMaterial);
-            scene.add(skybox);
-            
-            assetsLoaded++;
-            updateLoadingBar();
+            // Tán cây
+            const leavesGeometry = new THREE.SphereGeometry(2, 8, 8);
+            const leavesMaterial = new THREE.MeshLambertMaterial({ color: 0x27ae60 });
+            const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+            leaves.position.set(x, y + 3.5, z);
+            leaves.castShadow = true;
+            scene.add(leaves);
         }
         
-        // Tạo player
+        // ================ TẠO PLAYER ================
         function createPlayer() {
-            updateLoading("Đang tạo nhân vật...");
-            
             // Tạo nhóm player
             player = new THREE.Group();
             
             // Thân
-            const bodyGeometry = new THREE.BoxGeometry(1, 2, 1);
+            const bodyGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.5, 8);
             const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x3498db });
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.75;
             body.castShadow = true;
             player.add(body);
             
             // Đầu
-            const headGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const headGeometry = new THREE.SphereGeometry(0.4, 16, 16);
             const headMaterial = new THREE.MeshLambertMaterial({ color: 0xf1c40f });
             const head = new THREE.Mesh(headGeometry, headMaterial);
-            head.position.y = 1.5;
+            head.position.y = 1.8;
             head.castShadow = true;
             player.add(head);
             
+            // Tay phải (vũ khí)
+            const armGeometry = new THREE.BoxGeometry(0.2, 1, 0.2);
+            const armMaterial = new THREE.MeshLambertMaterial({ color: 0x3498db });
+            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+            rightArm.position.set(0.6, 1, 0);
+            rightArm.castShadow = true;
+            player.add(rightArm);
+            
             // Vũ khí
-            const weaponGeometry = new THREE.BoxGeometry(0.2, 0.2, 1.5);
+            const weaponGeometry = new THREE.BoxGeometry(0.1, 0.1, 1.5);
             const weaponMaterial = new THREE.MeshLambertMaterial({ color: 0x95a5a6 });
             const weapon = new THREE.Mesh(weaponGeometry, weaponMaterial);
-            weapon.position.set(0.8, 0.5, 0);
+            weapon.position.set(0.6, 0.5, 0.8);
+            weapon.rotation.x = Math.PI / 4;
             weapon.castShadow = true;
             player.add(weapon);
             
-            // Thêm vào scene
-            player.position.set(0, 3, 0);
+            // Tay trái
+            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+            leftArm.position.set(-0.6, 1, 0);
+            leftArm.castShadow = true;
+            player.add(leftArm);
+            
+            // Chân
+            const legGeometry = new THREE.BoxGeometry(0.3, 1, 0.3);
+            const legMaterial = new THREE.MeshLambertMaterial({ color: 0x2980b9 });
+            
+            const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+            rightLeg.position.set(0.3, -0.5, 0);
+            rightLeg.castShadow = true;
+            player.add(rightLeg);
+            
+            const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+            leftLeg.position.set(-0.3, -0.5, 0);
+            leftLeg.castShadow = true;
+            player.add(leftLeg);
+            
+            // Đặt vị trí player
+            player.position.set(0, 5, 0);
             player.castShadow = true;
             scene.add(player);
             
-            // Thêm camera follow
-            camera.lookAt(player.position);
+            // Tạo animation mixer
+            playerMixer = new THREE.AnimationMixer(player);
             
-            assetsLoaded++;
-            updateLoadingBar();
+            // Thêm player vào raycasting
+            player.userData = {
+                type: 'player',
+                hp: gameState.player.hp,
+                maxHP: gameState.player.maxHP
+            };
         }
         
-        // Tạo quái vật
+        // ================ TẠO QUÁI VẬT ================
+        function createEnemies(count) {
+            for (let i = 0; i < count; i++) {
+                createEnemy();
+            }
+        }
+        
         function createEnemy() {
-            const types = [
-                { name: 'Goblin', color: 0xe74c3c, size: 0.8, hp: 30 },
-                { name: 'Orc', color: 0x27ae60, size: 1.2, hp: 50 },
-                { name: 'Skeleton', color: 0xecf0f1, size: 1.0, hp: 40 }
+            const enemyTypes = [
+                { name: 'Goblin', color: 0xe74c3c, scale: 0.8, hp: 30, speed: 0.03, damage: 10 },
+                { name: 'Orc', color: 0x27ae60, scale: 1.2, hp: 50, speed: 0.02, damage: 15 },
+                { name: 'Skeleton', color: 0xecf0f1, scale: 1.0, hp: 40, speed: 0.04, damage: 8 }
             ];
             
-            const type = types[Math.floor(Math.random() * types.length)];
+            const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
             
             // Tạo nhóm enemy
             const enemy = new THREE.Group();
-            enemy.userData = {
-                type: type.name,
-                hp: type.hp,
-                maxHP: type.hp,
-                damage: 10,
-                speed: 2,
-                attacking: false,
-                attackCooldown: 0
-            };
+            enemy.scale.set(type.scale, type.scale, type.scale);
             
             // Thân
-            const enemyBodyGeometry = new THREE.BoxGeometry(type.size, type.size * 1.5, type.size);
-            const enemyBodyMaterial = new THREE.MeshLambertMaterial({ color: type.color });
-            const enemyBody = new THREE.Mesh(enemyBodyGeometry, enemyBodyMaterial);
-            enemyBody.castShadow = true;
-            enemy.add(enemyBody);
+            const bodyGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.5, 8);
+            const bodyMaterial = new THREE.MeshLambertMaterial({ color: type.color });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.75;
+            body.castShadow = true;
+            enemy.add(body);
             
             // Đầu
-            const enemyHeadGeometry = new THREE.SphereGeometry(type.size * 0.4, 16, 16);
-            const enemyHeadMaterial = new THREE.MeshLambertMaterial({ 
-                color: type.color === 0xecf0f1 ? 0xffffff : 0xf1c40f 
+            const headGeometry = new THREE.SphereGeometry(0.4, 16, 16);
+            const headMaterial = new THREE.MeshLambertMaterial({ 
+                color: type.name === 'Skeleton' ? 0xffffff : 0xf1c40f 
             });
-            const enemyHead = new THREE.Mesh(enemyHeadGeometry, enemyHeadMaterial);
-            enemyHead.position.y = type.size * 0.9;
-            enemyHead.castShadow = true;
-            enemy.add(enemyHead);
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 1.8;
+            head.castShadow = true;
+            enemy.add(head);
+            
+            // Mắt
+            const eyeGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const eyeMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
+            
+            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            leftEye.position.set(-0.15, 1.9, 0.35);
+            enemy.add(leftEye);
+            
+            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            rightEye.position.set(0.15, 1.9, 0.35);
+            enemy.add(rightEye);
+            
+            // Tay
+            const armGeometry = new THREE.BoxGeometry(0.2, 1, 0.2);
+            const armMaterial = new THREE.MeshLambertMaterial({ color: type.color });
+            
+            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+            leftArm.position.set(-0.6, 1, 0);
+            leftArm.castShadow = true;
+            enemy.add(leftArm);
+            
+            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+            rightArm.position.set(0.6, 1, 0);
+            rightArm.castShadow = true;
+            enemy.add(rightArm);
+            
+            // Chân
+            const legGeometry = new THREE.BoxGeometry(0.3, 1, 0.3);
+            const legMaterial = new THREE.MeshLambertMaterial({ 
+                color: type.name === 'Skeleton' ? 0xffffff : 0xc0392b 
+            });
+            
+            const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+            leftLeg.position.set(-0.3, -0.5, 0);
+            leftLeg.castShadow = true;
+            enemy.add(leftLeg);
+            
+            const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+            rightLeg.position.set(0.3, -0.5, 0);
+            rightLeg.castShadow = true;
+            enemy.add(rightLeg);
             
             // Vị trí ngẫu nhiên
             const angle = Math.random() * Math.PI * 2;
             const distance = 10 + Math.random() * 30;
             enemy.position.set(
                 Math.cos(angle) * distance,
-                2,
+                3,
                 Math.sin(angle) * distance
             );
             
+            // User data
+            enemy.userData = {
+                type: 'enemy',
+                enemyType: type.name,
+                hp: type.hp,
+                maxHP: type.hp,
+                damage: type.damage,
+                speed: type.speed,
+                attackRange: 2,
+                attackCooldown: 0,
+                lastAttackTime: 0,
+                isAttacking: false,
+                target: player,
+                wanderAngle: Math.random() * Math.PI * 2,
+                lastWanderChange: 0
+            };
+            
+            enemy.castShadow = true;
             scene.add(enemy);
             enemies.push(enemy);
+            
+            // Tạo animation mixer
+            const mixer = new THREE.AnimationMixer(enemy);
+            enemyMixers.push(mixer);
+            
+            // Cập nhật enemy hiện tại
+            if (!gameState.currentEnemy || Math.random() < 0.3) {
+                gameState.currentEnemy = enemy;
+                updateEnemyUI();
+            }
             
             return enemy;
         }
         
-        // Tạo items (vàng, máu, mana)
-        function createItems() {
-            updateLoading("Đang tạo vật phẩm...");
-            
-            for (let i = 0; i < 20; i++) {
-                const types = [
-                    { type: 'gold', color: 0xffd700, size: 0.3 },
-                    { type: 'health', color: 0xe74c3c, size: 0.4 },
-                    { type: 'mana', color: 0x3498db, size: 0.4 }
-                ];
-                
-                const itemType = types[Math.floor(Math.random() * types.length)];
-                
-                const geometry = new THREE.SphereGeometry(itemType.size, 16, 16);
-                const material = new THREE.MeshLambertMaterial({ 
-                    color: itemType.color,
-                    emissive: itemType.color,
-                    emissiveIntensity: 0.3
-                });
-                
-                const item = new THREE.Mesh(geometry, material);
-                item.userData = { type: itemType.type };
-                
-                // Vị trí ngẫu nhiên
-                item.position.set(
-                    (Math.random() - 0.5) * 180,
-                    1,
-                    (Math.random() - 0.5) * 180
-                );
-                
-                item.castShadow = true;
-                scene.add(item);
-            }
-            
-            assetsLoaded++;
-            updateLoadingBar();
-        }
-        
-        // Thiết lập điều khiển
+        // ================ ĐIỀU KHIỂN ================
         function setupControls() {
-            updateLoading("Đang thiết lập điều khiển...");
-            
-            // Điều khiển joystick cho mobile
+            // Joystick controls
+            const joystickContainer = document.getElementById('joystickContainer');
             const joystickHandle = document.getElementById('joystickHandle');
-            const joystickBase = document.querySelector('.joystick-base');
-            let isDragging = false;
             
-            joystickHandle.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                isDragging = true;
-                joystickActive = true;
-            });
+            joystickContainer.addEventListener('touchstart', handleJoystickStart);
+            joystickContainer.addEventListener('touchmove', handleJoystickMove);
+            joystickContainer.addEventListener('touchend', handleJoystickEnd);
             
-            document.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                e.preventDefault();
-                
-                const touch = e.touches[0];
-                const rect = joystickBase.getBoundingClientRect();
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-                
-                let x = touch.clientX - centerX;
-                let y = touch.clientY - centerY;
-                
-                // Giới hạn trong joystick
-                const maxDistance = rect.width / 2 - 30;
-                const distance = Math.sqrt(x * x + y * y);
-                
-                if (distance > maxDistance) {
-                    x = (x / distance) * maxDistance;
-                    y = (y / distance) * maxDistance;
-                }
-                
-                // Cập nhật vị trí joystick
-                joystickHandle.style.transform = `translate(${x}px, ${y}px)`;
-                
-                // Cập nhật vector di chuyển
-                joystickVector.set(x / maxDistance, -y / maxDistance);
-            });
+            // Mouse controls for desktop
+            joystickContainer.addEventListener('mousedown', handleJoystickStart);
+            document.addEventListener('mousemove', handleJoystickMove);
+            document.addEventListener('mouseup', handleJoystickEnd);
             
-            document.addEventListener('touchend', (e) => {
-                if (isDragging) {
-                    isDragging = false;
-                    joystickActive = false;
-                    joystickHandle.style.transform = 'translate(-50%, -50%)';
-                    joystickVector.set(0, 0);
-                }
-            });
+            // Keyboard controls
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
             
-            // Điều khiển bàn phím cho desktop
-            document.addEventListener('keydown', (e) => {
-                keys[e.key.toLowerCase()] = true;
-                
-                if (e.key === ' ') { // Space để nhảy
-                    playerJump();
-                }
-                if (e.key === 'h' || e.key === 'H') { // H để hồi phục
-                    playerHeal();
-                }
-                if (e.key === 'n' || e.key === 'N') { // N để quái tiếp
-                    createEnemy();
-                }
-            });
-            
-            document.addEventListener('keyup', (e) => {
-                keys[e.key.toLowerCase()] = false;
-            });
-            
-            // Điều khiển chuột
-            renderer.domElement.addEventListener('click', (e) => {
-                if (gameState.gameOver) return;
-                playerAttack();
-            });
-            
-            assetsLoaded++;
-            updateLoadingBar();
-        }
-        
-        // Thiết lập sự kiện
-        function setupEventListeners() {
-            updateLoading("Đang thiết lập sự kiện...");
-            
-            // Nút tấn công
+            // Action buttons
             document.getElementById('attackBtn').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 playerAttack();
             });
             
-            // Nút phép thuật
+            document.getElementById('attackBtn').addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                playerAttack();
+            });
+            
             document.getElementById('magicBtn').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 playerMagic();
             });
             
-            // Nút nhảy
+            document.getElementById('magicBtn').addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                playerMagic();
+            });
+            
             document.getElementById('jumpBtn').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 playerJump();
             });
             
-            // Nút hồi phục
-            document.getElementById('healBtn').addEventListener('click', playerHeal);
-            
-            // Nút quái tiếp
-            document.getElementById('nextEnemyBtn').addEventListener('click', () => {
-                createEnemy();
-                showNotification("Quái vật mới", "Một con quái vật mới đã xuất hiện!");
+            document.getElementById('jumpBtn').addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                playerJump();
             });
             
-            // Nút âm thanh
-            document.getElementById('toggleSoundBtn').addEventListener('click', toggleSound);
-            
-            // Nút restart
+            // Restart button
             document.getElementById('restartBtn').addEventListener('click', restartGame);
             
-            // Resize window
+            // Window resize
             window.addEventListener('resize', onWindowResize);
-            
-            assetsLoaded++;
-            updateLoadingBar();
         }
         
-        // Player di chuyển
-        function updatePlayerMovement(deltaTime) {
-            const speed = gameState.player.speed * deltaTime;
-            const moveVector = new THREE.Vector3();
+        function handleJoystickStart(e) {
+            e.preventDefault();
+            joystickActive = true;
             
-            // Điều khiển bàn phím (desktop)
-            if (keys['w'] || keys['arrowup']) moveVector.z -= speed;
-            if (keys['s'] || keys['arrowdown']) moveVector.z += speed;
-            if (keys['a'] || keys['arrowleft']) moveVector.x -= speed;
-            if (keys['d'] || keys['arrowright']) moveVector.x += speed;
+            const touch = e.type.includes('mouse') ? e : e.touches[0];
+            const rect = document.getElementById('joystickContainer').getBoundingClientRect();
             
-            // Điều khiển joystick (mobile)
-            if (joystickActive) {
-                moveVector.x += joystickVector.x * speed;
-                moveVector.z += joystickVector.y * speed;
+            joystickStartPos = {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2,
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            };
+        }
+        
+        function handleJoystickMove(e) {
+            if (!joystickActive) return;
+            e.preventDefault();
+            
+            const touch = e.type.includes('mouse') ? e : e.touches[0];
+            
+            if (joystickStartPos) {
+                const dx = touch.clientX - joystickStartPos.clientX;
+                const dy = touch.clientY - joystickStartPos.clientY;
+                
+                // Tính toán vector joystick (giới hạn trong phạm vi)
+                const maxDistance = 50;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const scale = distance > maxDistance ? maxDistance / distance : 1;
+                
+                joystickVector.set(dx * scale / maxDistance, -dy * scale / maxDistance);
+                
+                // Cập nhật vị trí joystick handle
+                const handle = document.getElementById('joystickHandle');
+                handle.style.transform = `translate(${dx * scale}px, ${dy * scale}px)`;
+                
+                // Cập nhật direction từ joystick
+                if (distance > 5) {
+                    moveForward = joystickVector.y > 0.1;
+                    moveBackward = joystickVector.y < -0.1;
+                    moveLeft = joystickVector.x < -0.1;
+                    moveRight = joystickVector.x > 0.1;
+                }
+            }
+        }
+        
+        function handleJoystickEnd(e) {
+            e.preventDefault();
+            joystickActive = false;
+            joystickVector.set(0, 0);
+            
+            // Reset joystick handle
+            const handle = document.getElementById('joystickHandle');
+            handle.style.transform = 'translate(-50%, -50%)';
+            
+            // Reset movement
+            moveForward = moveBackward = moveLeft = moveRight = false;
+        }
+        
+        function handleKeyDown(e) {
+            switch(e.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                    moveForward = true;
+                    break;
+                case 's':
+                case 'arrowdown':
+                    moveBackward = true;
+                    break;
+                case 'a':
+                case 'arrowleft':
+                    moveLeft = true;
+                    break;
+                case 'd':
+                case 'arrowright':
+                    moveRight = true;
+                    break;
+                case ' ':
+                    playerJump();
+                    break;
+                case 'h':
+                    playerHeal();
+                    break;
+            }
+        }
+        
+        function handleKeyUp(e) {
+            switch(e.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                    moveForward = false;
+                    break;
+                case 's':
+                case 'arrowdown':
+                    moveBackward = false;
+                    break;
+                case 'a':
+                case 'arrowleft':
+                    moveLeft = false;
+                    break;
+                case 'd':
+                case 'arrowright':
+                    moveRight = false;
+                    break;
+            }
+        }
+        
+        // ================ GAME LOGIC ================
+        function updatePlayer(deltaTime) {
+            if (gameState.gameOver) return;
+            
+            // Update cooldowns
+            if (gameState.attackCooldown > 0) {
+                gameState.attackCooldown -= deltaTime;
+            }
+            if (gameState.magicCooldown > 0) {
+                gameState.magicCooldown -= deltaTime;
             }
             
-            // Áp dụng di chuyển
-            player.position.add(moveVector);
+            // Movement
+            const speed = gameState.player.speed * 60 * deltaTime;
+            velocity.x = velocity.z = 0;
+            
+            if (moveForward) velocity.z -= speed;
+            if (moveBackward) velocity.z += speed;
+            if (moveLeft) velocity.x -= speed;
+            if (moveRight) velocity.x += speed;
+            
+            // Normalize diagonal movement
+            if (velocity.x !== 0 && velocity.z !== 0) {
+                velocity.multiplyScalar(0.7071); // 1/√2
+            }
+            
+            // Apply movement
+            player.position.x += velocity.x;
+            player.position.z += velocity.z;
             
             // Giới hạn di chuyển trong map
             player.position.x = Math.max(-95, Math.min(95, player.position.x));
             player.position.z = Math.max(-95, Math.min(95, player.position.z));
             
-            // Cập nhật camera để follow player
-            updateCamera();
+            // Gravity and jumping
+            if (player.position.y > 1.5) {
+                player.position.y -= 0.2 * 60 * deltaTime;
+                gameState.player.isJumping = true;
+            } else {
+                player.position.y = 1.5;
+                gameState.player.isJumping = false;
+                gameState.player.canJump = true;
+            }
             
-            // Xoay player theo hướng di chuyển
-            if (moveVector.length() > 0) {
-                const angle = Math.atan2(moveVector.x, moveVector.z);
+            // Rotate player based on movement direction
+            if (velocity.x !== 0 || velocity.z !== 0) {
+                const angle = Math.atan2(velocity.x, velocity.z);
                 player.rotation.y = angle;
+            }
+            
+            // Update camera
+            updateCamera();
+        }
+        
+        function updateEnemies(deltaTime) {
+            // Find closest enemy for UI
+            let closestEnemy = null;
+            let closestDistance = Infinity;
+            
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                
+                // Update enemy cooldown
+                if (enemy.userData.attackCooldown > 0) {
+                    enemy.userData.attackCooldown -= deltaTime;
+                }
+                
+                // Calculate distance to player
+                const distance = player.position.distanceTo(enemy.position);
+                
+                // Update closest enemy
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestEnemy = enemy;
+                }
+                
+                // Enemy AI
+                if (distance < 20) {
+                    // Move towards player
+                    const direction = new THREE.Vector3();
+                    direction.subVectors(player.position, enemy.position).normalize();
+                    
+                    // Random wandering when far away
+                    if (distance > 10) {
+                        const now = Date.now() / 1000;
+                        if (now - enemy.userData.lastWanderChange > 3) {
+                            enemy.userData.wanderAngle = Math.random() * Math.PI * 2;
+                            enemy.userData.lastWanderChange = now;
+                        }
+                        
+                        direction.x += Math.cos(enemy.userData.wanderAngle) * 0.3;
+                        direction.z += Math.sin(enemy.userData.wanderAngle) * 0.3;
+                        direction.normalize();
+                    }
+                    
+                    // Apply movement
+                    enemy.position.x += direction.x * enemy.userData.speed * 60 * deltaTime;
+                    enemy.position.z += direction.z * enemy.userData.speed * 60 * deltaTime;
+                    
+                    // Rotate enemy to face player
+                    const angle = Math.atan2(direction.x, direction.z);
+                    enemy.rotation.y = angle;
+                    
+                    // Attack if in range
+                    if (distance < enemy.userData.attackRange && enemy.userData.attackCooldown <= 0) {
+                        enemyAttack(enemy);
+                    }
+                }
+                
+                // Check if enemy is dead
+                if (enemy.userData.hp <= 0) {
+                    enemyDefeated(enemy);
+                    enemies.splice(i, 1);
+                    enemyMixers.splice(i, 1);
+                }
+                
+                // Update animation mixer
+                if (enemyMixers[i]) {
+                    enemyMixers[i].update(deltaTime);
+                }
+            }
+            
+            // Update current enemy for UI
+            if (closestEnemy && closestDistance < 30) {
+                gameState.currentEnemy = closestEnemy;
+                updateEnemyUI();
             }
         }
         
-        // Cập nhật camera
         function updateCamera() {
-            // Camera follow player từ phía sau
+            // Third person camera
             const cameraDistance = 10;
             const cameraHeight = 5;
             
             const cameraOffset = new THREE.Vector3(
-                Math.sin(player.rotation.y) * cameraDistance,
+                0,
                 cameraHeight,
-                Math.cos(player.rotation.y) * cameraDistance
+                cameraDistance
             );
+            
+            // Rotate camera offset based on player rotation
+            cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.y);
             
             camera.position.copy(player.position).add(cameraOffset);
             camera.lookAt(player.position);
         }
         
-        // Player tấn công
+        // ================ COMBAT ================
         function playerAttack() {
-            if (gameState.gameOver) return;
+            if (gameState.gameOver || gameState.attackCooldown > 0) return;
             
-            // Tìm quái vật gần nhất
-            let nearestEnemy = null;
-            let nearestDistance = Infinity;
+            gameState.attackCooldown = 0.5; // 0.5 giây cooldown
+            
+            // Tạo hiệu ứng tấn công
+            createAttackEffect();
+            
+            // Tìm quái vật trong phạm vi tấn công
+            const attackRange = 3;
+            let hitEnemy = false;
             
             enemies.forEach(enemy => {
                 const distance = player.position.distanceTo(enemy.position);
-                if (distance < 5 && distance < nearestDistance) {
-                    nearestDistance = distance;
-                    nearestEnemy = enemy;
-                }
-            });
-            
-            if (nearestEnemy) {
-                // Gây damage
-                const damage = gameState.player.damage;
-                nearestEnemy.userData.hp -= damage;
-                
-                // Hiệu ứng tấn công
-                createAttackEffect(player.position);
-                
-                // Kiểm tra quái vật chết
-                if (nearestEnemy.userData.hp <= 0) {
-                    enemyDefeated(nearestEnemy);
-                } else {
-                    // Quái vật bị tấn công
-                    enemyReact(nearestEnemy);
-                }
-                
-                // Cập nhật UI
-                updateUI();
-                showDamageEffect();
-            }
-        }
-        
-        // Player dùng phép
-        function playerMagic() {
-            if (gameState.gameOver || gameState.player.mana < 10) return;
-            
-            gameState.player.mana -= 10;
-            
-            // Tìm tất cả quái vật trong phạm vi
-            enemies.forEach(enemy => {
-                const distance = player.position.distanceTo(enemy.position);
-                if (distance < 8) {
-                    const damage = gameState.player.magicDamage;
+                if (distance < attackRange) {
+                    // Gây damage
+                    const damage = gameState.player.damage + Math.floor(Math.random() * 5);
                     enemy.userData.hp -= damage;
                     
-                    // Hiệu ứng phép thuật
-                    createMagicEffect(enemy.position);
+                    // Hiệu ứng damage
+                    createDamageEffect(enemy.position, damage);
                     
+                    // Kiểm tra enemy chết
                     if (enemy.userData.hp <= 0) {
-                        enemyDefeated(enemy);
+                        addMessage(`Bạn đã tiêu diệt ${enemy.userData.enemyType}!`, "player");
                     } else {
-                        enemyReact(enemy);
+                        addMessage(`Bạn tấn công gây ${damage} damage!`, "player");
                     }
+                    
+                    hitEnemy = true;
                 }
             });
+            
+            if (!hitEnemy) {
+                addMessage("Tấn công hụt! Hãy đến gần quái vật hơn.", "info");
+            }
             
             updateUI();
         }
         
-        // Player nhảy
+        function playerMagic() {
+            if (gameState.gameOver || gameState.magicCooldown > 0 || gameState.player.mana < 15) return;
+            
+            gameState.magicCooldown = 1.5; // 1.5 giây cooldown
+            gameState.player.mana -= 15;
+            
+            // Tạo hiệu ứng phép thuật
+            createMagicEffect();
+            
+            // Tìm quái vật trong phạm vi lớn hơn
+            const magicRange = 8;
+            let hitCount = 0;
+            
+            enemies.forEach(enemy => {
+                const distance = player.position.distanceTo(enemy.position);
+                if (distance < magicRange) {
+                    // Gây damage phép
+                    const damage = gameState.player.magicDamage + Math.floor(Math.random() * 10);
+                    enemy.userData.hp -= damage;
+                    
+                    // Hiệu ứng phép
+                    createMagicHitEffect(enemy.position);
+                    
+                    hitCount++;
+                    
+                    if (enemy.userData.hp <= 0) {
+                        addMessage(`Phép thuật tiêu diệt ${enemy.userData.enemyType}!`, "player");
+                    }
+                }
+            });
+            
+            if (hitCount > 0) {
+                addMessage(`Phép thuật đánh trúng ${hitCount} quái vật!`, "player");
+            } else {
+                addMessage("Phép thuật không trúng mục tiêu nào!", "info");
+            }
+            
+            updateUI();
+        }
+        
         function playerJump() {
-            // Kiểm tra player có đang trên mặt đất không
-            if (player.position.y <= 3) {
-                player.position.y += 8;
-            }
+            if (gameState.gameOver || !gameState.player.canJump) return;
+            
+            gameState.player.canJump = false;
+            player.position.y += gameState.player.jumpForce;
+            addMessage("Nhảy!", "info");
         }
         
-        // Player hồi phục
         function playerHeal() {
-            if (gameState.player.mana >= 20 && gameState.player.hp < gameState.player.maxHP) {
-                gameState.player.mana -= 20;
-                gameState.player.hp = Math.min(gameState.player.maxHP, gameState.player.hp + 30);
-                updateUI();
-                createHealEffect(player.position);
+            if (gameState.gameOver || gameState.player.mana < 25) return;
+            
+            const healAmount = 30;
+            const oldHp = gameState.player.hp;
+            gameState.player.hp = Math.min(gameState.player.maxHP, gameState.player.hp + healAmount);
+            gameState.player.mana -= 25;
+            
+            const actualHeal = gameState.player.hp - oldHp;
+            if (actualHeal > 0) {
+                addMessage(`Hồi phục ${actualHeal} HP!`, "player");
+                createHealEffect();
             }
+            
+            updateUI();
         }
         
-        // Quái vật phản ứng
-        function enemyReact(enemy) {
-            enemy.userData.attacking = true;
-            enemy.userData.attackCooldown = 1.0;
+        function enemyAttack(enemy) {
+            if (enemy.userData.attackCooldown > 0) return;
             
-            // Di chuyển về phía player
-            const direction = new THREE.Vector3();
-            direction.subVectors(player.position, enemy.position).normalize();
-            enemy.position.add(direction.multiplyScalar(enemy.userData.speed * 0.1));
+            enemy.userData.attackCooldown = 2; // 2 giây cooldown
+            enemy.userData.isAttacking = true;
             
-            // Xoay về phía player
-            const angle = Math.atan2(direction.x, direction.z);
-            enemy.rotation.y = angle;
-            
-            // Tấn công player nếu đủ gần
-            if (player.position.distanceTo(enemy.position) < 2) {
-                gameState.player.hp -= enemy.userData.damage;
-                updateUI();
-                showDamageEffect();
+            // Kiểm tra khoảng cách
+            const distance = player.position.distanceTo(enemy.position);
+            if (distance < enemy.userData.attackRange) {
+                // Gây damage cho player
+                const damage = enemy.userData.damage + Math.floor(Math.random() * 3);
+                gameState.player.hp -= damage;
                 
+                // Hiệu ứng damage
+                showDamageFlash();
+                createEnemyAttackEffect(enemy.position);
+                
+                addMessage(`${enemy.userData.enemyType} tấn công gây ${damage} damage!`, "enemy");
+                
+                // Kiểm tra player chết
                 if (gameState.player.hp <= 0) {
                     gameOver();
                 }
+                
+                updateUI();
             }
         }
         
-        // Quái vật bị tiêu diệt
         function enemyDefeated(enemy) {
             // Thưởng
             gameState.player.gold += 10;
@@ -1011,24 +1421,22 @@
                 levelUp();
             }
             
-            // Hiệu ứng tiêu diệt
+            // Tạo hiệu ứng nổ
             createExplosionEffect(enemy.position);
             
-            // Xóa quái vật
+            // Xóa enemy khỏi scene
             scene.remove(enemy);
-            enemies = enemies.filter(e => e !== enemy);
             
-            // Tạo quái vật mới sau 1-3 giây
+            // Tạo enemy mới sau 3-5 giây
             setTimeout(() => {
                 if (!gameState.gameOver) {
                     createEnemy();
                 }
-            }, 1000 + Math.random() * 2000);
+            }, 3000 + Math.random() * 2000);
             
             updateUI();
         }
         
-        // Lên cấp
         function levelUp() {
             gameState.player.level++;
             gameState.player.exp -= gameState.player.expToNextLevel;
@@ -1041,31 +1449,160 @@
             gameState.player.mana = gameState.player.maxMana;
             gameState.player.damage += 5;
             gameState.player.magicDamage += 8;
-            gameState.player.speed += 1;
+            gameState.player.speed += 0.02;
             
-            showNotification("LÊN CẤP!", `Bạn đã đạt cấp ${gameState.player.level}!`);
-            createLevelUpEffect(player.position);
+            addMessage(`CHÚC MỪNG! Bạn đã lên cấp ${gameState.player.level}!`, "info");
+            createLevelUpEffect();
             updateUI();
         }
         
-        // Game over
-        function gameOver() {
-            gameState.gameOver = true;
-            showNotification("GAME OVER", `Bạn đã tiêu diệt ${gameState.player.kills} quái vật!`, true);
-        }
-        
-        // Tạo hiệu ứng tấn công
-        function createAttackEffect(position) {
-            const geometry = new THREE.SphereGeometry(0.5, 8, 8);
-            const material = new THREE.MeshBasicMaterial({ 
+        // ================ EFFECTS ================
+        function createAttackEffect() {
+            // Tạo vòng tròn tấn công
+            const geometry = new THREE.RingGeometry(0.5, 1.5, 16);
+            const material = new THREE.MeshBasicMaterial({
                 color: 0xff9900,
+                side: THREE.DoubleSide,
                 transparent: true,
                 opacity: 0.8
             });
             
             const effect = new THREE.Mesh(geometry, material);
+            effect.position.copy(player.position);
+            effect.position.y = 0.1;
+            effect.rotation.x = -Math.PI / 2;
+            scene.add(effect);
+            
+            // Animation
+            let scale = 1;
+            const animate = () => {
+                scale += 0.1;
+                effect.scale.setScalar(scale);
+                material.opacity -= 0.05;
+                
+                if (material.opacity > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    scene.remove(effect);
+                }
+            };
+            animate();
+            
+            // Thêm vào danh sách effects
+            attackEffects.push({ mesh: effect, material: material, scale: 1 });
+        }
+        
+        function createMagicEffect() {
+            // Tạo hình cầu phép thuật
+            const geometry = new THREE.SphereGeometry(1, 16, 16);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x9b59b6,
+                transparent: true,
+                opacity: 0.7
+            });
+            
+            const effect = new THREE.Mesh(geometry, material);
+            effect.position.copy(player.position);
+            effect.position.y = 1;
+            scene.add(effect);
+            
+            // Animation
+            let time = 0;
+            const animate = () => {
+                time += 0.1;
+                effect.scale.setScalar(1 + Math.sin(time) * 0.3);
+                effect.rotation.y = time;
+                material.opacity -= 0.03;
+                
+                if (material.opacity > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    scene.remove(effect);
+                }
+            };
+            animate();
+        }
+        
+        function createMagicHitEffect(position) {
+            // Tạo tia sét nhỏ
+            for (let i = 0; i < 5; i++) {
+                const geometry = new THREE.ConeGeometry(0.1, 0.5, 4);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0x9b59b6,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const bolt = new THREE.Mesh(geometry, material);
+                bolt.position.copy(position);
+                bolt.position.y += Math.random() * 2;
+                bolt.rotation.x = Math.random() * Math.PI;
+                bolt.rotation.z = Math.random() * Math.PI;
+                scene.add(bolt);
+                
+                // Animation
+                let opacity = 0.8;
+                const animate = () => {
+                    opacity -= 0.05;
+                    material.opacity = opacity;
+                    bolt.position.y += 0.1;
+                    
+                    if (opacity > 0) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        scene.remove(bolt);
+                    }
+                };
+                animate();
+            }
+        }
+        
+        function createDamageEffect(position, damage) {
+            // Tạo text damage (simulate với hình học đơn giản)
+            const geometry = new THREE.PlaneGeometry(0.5, 0.2);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                transparent: true,
+                opacity: 0.9,
+                side: THREE.DoubleSide
+            });
+            
+            const text = new THREE.Mesh(geometry, material);
+            text.position.copy(position);
+            text.position.y += 2;
+            text.lookAt(camera.position);
+            scene.add(text);
+            
+            // Animation
+            let time = 0;
+            const animate = () => {
+                time += 0.05;
+                text.position.y += 0.05;
+                material.opacity -= 0.03;
+                
+                if (material.opacity > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    scene.remove(text);
+                }
+            };
+            animate();
+        }
+        
+        function createEnemyAttackEffect(position) {
+            // Tạo vòng đỏ cho enemy attack
+            const geometry = new THREE.RingGeometry(0.3, 0.8, 8);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.7
+            });
+            
+            const effect = new THREE.Mesh(geometry, material);
             effect.position.copy(position);
-            effect.position.y += 2;
+            effect.position.y = 0.1;
+            effect.rotation.x = -Math.PI / 2;
             scene.add(effect);
             
             // Animation
@@ -1084,56 +1621,24 @@
             animate();
         }
         
-        // Tạo hiệu ứng phép thuật
-        function createMagicEffect(position) {
-            const geometry = new THREE.IcosahedronGeometry(1, 0);
-            const material = new THREE.MeshBasicMaterial({ 
-                color: 0x9b59b6,
-                wireframe: true,
-                transparent: true,
-                opacity: 0.7
-            });
-            
-            const effect = new THREE.Mesh(geometry, material);
-            effect.position.copy(position);
-            effect.position.y += 2;
-            scene.add(effect);
-            
-            let time = 0;
-            const animate = () => {
-                time += 0.1;
-                effect.rotation.y = time;
-                effect.rotation.x = time * 0.5;
-                effect.scale.setScalar(1 + Math.sin(time) * 0.3);
-                material.opacity -= 0.03;
-                
-                if (material.opacity > 0) {
-                    requestAnimationFrame(animate);
-                } else {
-                    scene.remove(effect);
-                }
-            };
-            animate();
-        }
-        
-        // Tạo hiệu ứng hồi phục
-        function createHealEffect(position) {
-            for (let i = 0; i < 10; i++) {
-                const geometry = new THREE.SphereGeometry(0.2, 8, 8);
-                const material = new THREE.MeshBasicMaterial({ 
-                    color: 0x2ecc71,
+        function createHealEffect() {
+            // Tạo các hạt xanh hồi phục
+            for (let i = 0; i < 15; i++) {
+                const geometry = new THREE.SphereGeometry(0.1, 8, 8);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
                     transparent: true,
                     opacity: 0.8
                 });
                 
                 const particle = new THREE.Mesh(geometry, material);
-                particle.position.copy(position);
-                particle.position.y += 1;
+                particle.position.copy(player.position);
+                particle.position.y += Math.random() * 2;
                 scene.add(particle);
                 
                 // Random direction
                 const angle = Math.random() * Math.PI * 2;
-                const speed = 0.05 + Math.random() * 0.1;
+                const speed = 0.02 + Math.random() * 0.03;
                 const dx = Math.cos(angle) * speed;
                 const dz = Math.sin(angle) * speed;
                 
@@ -1141,7 +1646,7 @@
                 const animate = () => {
                     particle.position.x += dx;
                     particle.position.z += dz;
-                    particle.position.y += 0.1;
+                    particle.position.y += 0.05;
                     opacity -= 0.02;
                     material.opacity = opacity;
                     
@@ -1155,11 +1660,11 @@
             }
         }
         
-        // Tạo hiệu ứng nổ
         function createExplosionEffect(position) {
+            // Tạo hiệu ứng nổ với nhiều hạt
             for (let i = 0; i < 20; i++) {
-                const geometry = new THREE.SphereGeometry(0.1, 4, 4);
-                const material = new THREE.MeshBasicMaterial({ 
+                const geometry = new THREE.SphereGeometry(0.1, 6, 6);
+                const material = new THREE.MeshBasicMaterial({
                     color: 0xff9900,
                     transparent: true,
                     opacity: 1
@@ -1169,20 +1674,20 @@
                 particle.position.copy(position);
                 scene.add(particle);
                 
-                // Random direction và speed
+                // Random direction
                 const angle = Math.random() * Math.PI * 2;
-                const speed = 0.1 + Math.random() * 0.2;
+                const speed = 0.05 + Math.random() * 0.1;
                 const dx = Math.cos(angle) * speed;
                 const dz = Math.sin(angle) * speed;
-                const dy = Math.random() * 0.2;
+                const dy = Math.random() * 0.1;
                 
                 let opacity = 1;
                 const animate = () => {
                     particle.position.x += dx;
                     particle.position.z += dz;
                     particle.position.y += dy;
-                    dy -= 0.01; // Gravity
-                    opacity -= 0.05;
+                    dy -= 0.005; // Gravity
+                    opacity -= 0.04;
                     material.opacity = opacity;
                     
                     if (opacity > 0) {
@@ -1195,196 +1700,177 @@
             }
         }
         
-        // Tạo hiệu ứng lên cấp
-        function createLevelUpEffect(position) {
-            const ringGeometry = new THREE.RingGeometry(1, 1.5, 32);
-            const ringMaterial = new THREE.MeshBasicMaterial({ 
+        function createLevelUpEffect() {
+            // Tạo vòng tròn vàng lên cấp
+            const geometry = new THREE.TorusGeometry(1.5, 0.2, 16, 100);
+            const material = new THREE.MeshBasicMaterial({
                 color: 0xffd700,
-                side: THREE.DoubleSide,
                 transparent: true,
                 opacity: 0.8
             });
             
-            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-            ring.position.copy(position);
-            ring.position.y += 1;
-            ring.rotation.x = Math.PI / 2;
+            const ring = new THREE.Mesh(geometry, material);
+            ring.position.copy(player.position);
+            ring.position.y = 0.5;
             scene.add(ring);
             
+            // Animation
             let time = 0;
             const animate = () => {
                 time += 0.05;
-                ring.scale.setScalar(1 + time);
-                ringMaterial.opacity = 0.8 - time * 0.4;
+                ring.rotation.x = time;
                 ring.rotation.z = time;
+                material.opacity -= 0.02;
+                ring.position.y += 0.05;
                 
-                if (ringMaterial.opacity > 0) {
+                if (material.opacity > 0) {
                     requestAnimationFrame(animate);
                 } else {
                     scene.remove(ring);
                 }
             };
             animate();
+            
+            // Tạo các hạt vàng
+            for (let i = 0; i < 30; i++) {
+                const particleGeometry = new THREE.SphereGeometry(0.1, 6, 6);
+                const particleMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffd700,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                particle.position.copy(player.position);
+                particle.position.y = 0.5;
+                scene.add(particle);
+                
+                // Random upward direction
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 0.03 + Math.random() * 0.05;
+                const dx = Math.cos(angle) * speed;
+                const dz = Math.sin(angle) * speed;
+                const dy = 0.1 + Math.random() * 0.1;
+                
+                let opacity = 0.9;
+                const animateParticle = () => {
+                    particle.position.x += dx;
+                    particle.position.z += dz;
+                    particle.position.y += dy;
+                    dy -= 0.005;
+                    opacity -= 0.03;
+                    particleMaterial.opacity = opacity;
+                    
+                    if (opacity > 0) {
+                        requestAnimationFrame(animateParticle);
+                    } else {
+                        scene.remove(particle);
+                    }
+                };
+                animateParticle();
+            }
         }
         
-        // Cập nhật UI
+        function showDamageFlash() {
+            const overlay = document.getElementById('damageOverlay');
+            overlay.style.opacity = '0.5';
+            
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+            }, 200);
+        }
+        
+        // ================ UI UPDATES ================
         function updateUI() {
-            // Cập nhật thanh máu
-            const healthPercent = (gameState.player.hp / gameState.player.maxHP) * 100;
-            document.getElementById('healthBar').style.width = `${healthPercent}%`;
+            // Player stats
+            const hpPercent = (gameState.player.hp / gameState.player.maxHP) * 100;
+            const manaPercent = (gameState.player.mana / gameState.player.maxMana) * 100;
+            
+            document.getElementById('healthBar').style.width = `${hpPercent}%`;
             document.getElementById('healthText').textContent = `${gameState.player.hp}/${gameState.player.maxHP}`;
             document.getElementById('hpText').textContent = `${gameState.player.hp}/${gameState.player.maxHP}`;
             
-            // Cập nhật mana
-            const manaPercent = (gameState.player.mana / gameState.player.maxMana) * 100;
             document.getElementById('manaBar').style.width = `${manaPercent}%`;
             document.getElementById('manaText').textContent = `${gameState.player.mana}/${gameState.player.maxMana}`;
+            document.getElementById('manaTextValue').textContent = `${gameState.player.mana}/${gameState.player.maxMana}`;
             
-            // Cập nhật thông tin khác
             document.getElementById('levelText').textContent = gameState.player.level;
             document.getElementById('goldText').textContent = gameState.player.gold;
             document.getElementById('killText').textContent = gameState.player.kills;
         }
         
-        // Hiệu ứng damage
-        function showDamageEffect() {
-            const effect = document.getElementById('damageEffect');
-            effect.style.opacity = '0.5';
-            
-            setTimeout(() => {
-                effect.style.opacity = '0';
-            }, 200);
-        }
-        
-        // Hiển thị thông báo
-        function showNotification(title, text, showRestart = false) {
-            document.getElementById('notificationTitle').textContent = title;
-            document.getElementById('notificationText').textContent = text;
-            document.getElementById('notification').style.display = 'block';
-            
-            if (showRestart) {
-                document.getElementById('restartBtn').style.display = 'block';
-            } else {
-                document.getElementById('restartBtn').style.display = 'none';
-                setTimeout(() => {
-                    document.getElementById('notification').style.display = 'none';
-                }, 2000);
+        function updateEnemyUI() {
+            if (gameState.currentEnemy) {
+                const enemy = gameState.currentEnemy;
+                const hpPercent = (enemy.userData.hp / enemy.userData.maxHP) * 100;
+                const distance = Math.floor(player.position.distanceTo(enemy.position));
+                
+                document.getElementById('enemyType').textContent = enemy.userData.enemyType;
+                document.getElementById('enemyHpText').textContent = `${enemy.userData.hp}/${enemy.userData.maxHP}`;
+                document.getElementById('enemyHealthBar').style.width = `${hpPercent}%`;
+                document.getElementById('enemyHealthText').textContent = `${enemy.userData.hp}/${enemy.userData.maxHP}`;
+                document.getElementById('enemyDistance').textContent = `${distance}m`;
             }
         }
         
-        // Bật/tắt âm thanh
-        function toggleSound() {
-            gameState.soundEnabled = !gameState.soundEnabled;
-            const btn = document.getElementById('toggleSoundBtn');
-            btn.textContent = `Âm thanh: ${gameState.soundEnabled ? 'Bật' : 'Tắt'}`;
+        function addMessage(text, type) {
+            const messageLog = document.getElementById('messageLog');
+            const message = document.createElement('div');
+            message.className = `message ${type}-msg`;
+            message.textContent = text;
+            
+            messageLog.appendChild(message);
+            messageLog.scrollTop = messageLog.scrollHeight;
+            
+            // Giới hạn số lượng message
+            const messages = messageLog.querySelectorAll('.message');
+            if (messages.length > 8) {
+                messages[0].remove();
+            }
         }
         
-        // Chơi lại
+        function gameOver() {
+            gameState.gameOver = true;
+            document.getElementById('finalKills').textContent = gameState.player.kills;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+            addMessage("Game Over! Bạn đã bị tiêu diệt.", "enemy");
+        }
+        
         function restartGame() {
-            // Reset game state
-            gameState = {
-                player: {
-                    hp: 100,
-                    maxHP: 100,
-                    mana: 50,
-                    maxMana: 50,
-                    level: 1,
-                    gold: 0,
-                    kills: 0,
-                    exp: 0,
-                    expToNextLevel: 100,
-                    damage: 15,
-                    magicDamage: 25,
-                    speed: 5
-                },
-                enemies: [],
-                gameOver: false,
-                soundEnabled: true
-            };
-            
-            // Xóa tất cả quái vật cũ
-            enemies.forEach(enemy => scene.remove(enemy));
-            enemies = [];
-            
-            // Reset player
-            player.position.set(0, 3, 0);
-            player.rotation.set(0, 0, 0);
-            
-            // Tạo quái vật mới
-            for (let i = 0; i < 5; i++) {
-                createEnemy();
-            }
-            
-            // Cập nhật UI
-            updateUI();
-            
-            // Ẩn thông báo
-            document.getElementById('notification').style.display = 'none';
+            location.reload();
         }
         
-        // Cập nhật loading
-        function updateLoading(text) {
+        function updateLoading(text, progress) {
             document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingProgress').style.width = `${progress}%`;
         }
         
-        function updateLoadingBar() {
-            const percent = (assetsLoaded / totalAssets) * 100;
-            document.getElementById('loadingBar').style.width = `${percent}%`;
-        }
-        
-        // Resize window
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         
-        // Game loop
+        // ================ GAME LOOP ================
         function animate() {
             requestAnimationFrame(animate);
             
-            const deltaTime = Math.min(clock.getDelta(), 0.1);
+            const deltaTime = clock.getDelta();
             
-            if (!gameState.gameOver) {
-                // Cập nhật player
-                updatePlayerMovement(deltaTime * 60);
-                
-                // Áp dụng gravity
-                if (player.position.y > 3) {
-                    player.position.y -= 0.5;
-                }
-                
-                // Cập nhật quái vật
-                enemies.forEach(enemy => {
-                    if (enemy.userData.attackCooldown > 0) {
-                        enemy.userData.attackCooldown -= deltaTime;
-                    } else {
-                        enemy.userData.attacking = false;
-                    }
-                    
-                    // Quái vật di chuyển ngẫu nhiên
-                    if (!enemy.userData.attacking && Math.random() < 0.01) {
-                        enemy.userData.moveAngle = Math.random() * Math.PI * 2;
-                    }
-                    
-                    if (enemy.userData.moveAngle !== undefined) {
-                        const moveSpeed = enemy.userData.speed * deltaTime;
-                        enemy.position.x += Math.cos(enemy.userData.moveAngle) * moveSpeed;
-                        enemy.position.z += Math.sin(enemy.userData.moveAngle) * moveSpeed;
-                        
-                        // Giới hạn di chuyển
-                        enemy.position.x = Math.max(-95, Math.min(95, enemy.position.x));
-                        enemy.position.z = Math.max(-95, Math.min(95, enemy.position.z));
-                    }
-                });
+            if (playerMixer) {
+                playerMixer.update(deltaTime);
             }
             
-            // Render
+            if (!gameState.gameOver) {
+                updatePlayer(deltaTime);
+                updateEnemies(deltaTime);
+            }
+            
             renderer.render(scene, camera);
         }
         
-        // Bắt đầu game
-        window.onload = init;
+        // ================ START GAME ================
+        init();
     </script>
 </body>
-</html>
+    </html>
