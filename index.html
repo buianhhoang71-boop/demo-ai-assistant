@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Halo Maidens Mobile</title>
+    <style>
+        body { margin: 0; background: #1a1a2e; color: white; text-align: center; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        canvas { background: #0d0d1a; display: block; margin: 10px auto; border: 3px solid #4a4a6e; max-width: 95%; height: auto; border-radius: 8px; }
+        .joypad { display: grid; grid-template-columns: repeat(3, 80px); gap: 15px; justify-content: center; margin-top: 20px; }
+        .btn-dir { width: 80px; height: 80px; background: rgba(255,255,255,0.1); border: 2px solid #3366ff; color: white; border-radius: 50%; font-size: 35px; display: flex; align-items: center; justify-content: center; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .btn-dir:active { background: #3366ff; transform: scale(0.9); }
+        .btn-gacha { background: #ffcc00; color: black; border: none; font-weight: bold; font-size: 20px; }
+        #status { color: gold; font-weight: bold; margin-top: 10px; height: 20px; }
+    </style>
+</head>
+<body>
+    <h3 style="margin:10px;">HALO MAIDENS: MOBILE</h3>
+    <canvas id="gameCanvas"></canvas>
+    <div id="status"></div>
+
+    <div class="joypad">
+        <div></div> <div class="btn-dir" ontouchstart="move('up')">↑</div> <div></div>
+        <div class="btn-dir" ontouchstart="move('left')">←</div> <div class="btn-dir btn-gacha" onclick="quay()">GO</div> <div class="btn-dir" ontouchstart="move('right')">→</div>
+        <div></div> <div class="btn-dir" ontouchstart="move('down')">↓</div> <div></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 400; canvas.height = 300;
+
+        let p = { x: 50, y: 130, c: "#3366ff", n: "Nam" };
+        let f = { x: 300, y: 130, c: "#ff69b4", n: "Nữ" };
+
+        function draw() {
+            ctx.clearRect(0, 0, 400, 300);
+            // Vẽ nhân vật Nam
+            ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 40, 40);
+            ctx.fillStyle = "white"; ctx.fillText(p.n, p.x + 8, p.y - 10);
+            // Vẽ nhân vật Nữ
+            ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x+20, f.y+20, 20, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "white"; ctx.fillText(f.n, f.x + 10, f.y - 10);
+        }
+
+        function move(d) {
+            const speed = 20;
+            if(d=='up' && p.y > 0) p.y -= speed;
+            if(d=='down' && p.y < 260) p.y += speed;
+            if(d=='left' && p.x > 0) p.x -= speed;
+            if(d=='right' && p.x < 360) p.x += speed;
+            draw();
+        }
+
+        function quay() {
+            const r = Math.random();
+            const status = document.getElementById("status");
+            if(r < 0.2) { f.c = "gold"; status.innerText = "SSR TRÚNG RỒI!"; }
+            else { f.c = "gray"; status.innerText = "Hụt rồi, thử lại nhé!"; }
+            draw();
+        }
+        draw();
+    </script>
+</body>
+</html>
