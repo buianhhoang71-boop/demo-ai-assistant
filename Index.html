@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simple 2D Battle</title>
+<style>
+    body { margin:0; background:#111; text-align:center; color:white; }
+    canvas { background:#87CEEB; display:block; margin:auto; border:3px solid #ff66b2; }
+</style>
+</head>
+<body>
+
+<h3>⚔️ SIMPLE 2D BATTLE GAME ⚔️</h3>
+<canvas id="game" width="800" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+// ===== INPUT =====
+const keys = {};
+document.addEventListener("keydown", e => keys[e.code] = true);
+document.addEventListener("keyup", e => keys[e.code] = false);
+
+// ===== CONSTANT =====
+const gravity = 0.6;
+const groundY = 330;
+
+// ===== PLAYER =====
+const player = {
+    x: 100, y: 0,
+    w: 40, h: 40,
+    speed: 5,
+    velY: 0,
+    onGround: false,
+    attacking: false,
+    attackCooldown: 0
+};
+
+// ===== ENEMY =====
+const enemy = {
+    x: 550, y: groundY - 40,
+    w: 40, h: 40,
+    hp: 3,
+    alive: true
+};
+
+// ===== UPDATE =====
+function update() {
+
+    // === MOVE ===
+    if (keys["ArrowLeft"] || keys["KeyA"]) player.x -= player.speed;
+    if (keys["ArrowRight"] || keys["KeyD"]) player.x += player.speed;
+
+    // === JUMP ===
+    if ((keys["Space"] || keys["ArrowUp"]) && player.onGround) {
+        player.velY = -12;
+        player.onGround = false;
+    }
+
+    // === GRAVITY ===
+    player.velY += gravity;
+    player.y += player.velY;
+
+    if (player.y + player.h >= groundY) {
+        player.y = groundY - player.h;
+        player.velY = 0;
+        player.onGround = true;
+    }
+
+    // === ATTACK ===
+    if (keys["KeyZ"] && player.attackCooldown <= 0) {
+        player.attacking = true;
+        player.attackCooldown = 20;
+
+        if (enemy.alive && hit(player, enemy)) {
+            enemy.hp--;
+            if (enemy.hp <= 0) enemy.alive = false;
+        }
+    }
+
+    if (player.attackCooldown > 0) player.attackCooldown--;
+    if (player.attackCooldown <= 10) player.attacking = false;
+}
+
+// ===== COLLISION =====
+function hit(a, b) {
+    return (
+        a.x + a.w + 20 > b.x &&
+        a.x < b.x + b.w &&
+        a.y + a.h > b.y &&
+        a.y < b.y + b.h
+    );
+}
+
+// ===== DRAW =====
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Ground
+    ctx.fillStyle = "#3a1a3a";
+    ctx.fillRect(0, groundY, canvas.width, 70);
+
+    // Player
+    ctx.fillStyle = "#00ccff";
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+
+    // Attack box
+    if (player.attacking) {
+        ctx.fillStyle = "rgba(255,255,0,0.6)";
+        ctx.fillRect(player.x + player.w, player.y + 10, 20, 20);
+    }
+
+    // Enemy
+    if (enemy.alive) {
+        ctx.fillStyle = "red";
+        ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
+
+        // HP bar
+        ctx.fillStyle = "black";
+        ctx.fillRect(enemy.x, enemy.y - 8, 40, 5);
+        ctx.fillStyle = "lime";
+        ctx.fillRect(enemy.x, enemy.y - 8, enemy.hp * 13, 5);
+    } else {
+        ctx.fillStyle = "gray";
+        ctx.fillText("Enemy defeated", enemy.x - 10, enemy.y);
+    }
+}
+
+// ===== LOOP =====
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+gameLoop();
+</script>
+</body>
+</html>
