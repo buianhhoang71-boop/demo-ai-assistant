@@ -900,3 +900,1394 @@
     </script>
 </body>
     </html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Game Đánh Quái 3D - Tối Ưu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            touch-action: none;
+        }
+        
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        canvas {
+            display: block;
+            outline: none;
+        }
+        
+        /* Compact UI */
+        .ui-compact {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* Health Bar Top Center */
+        .health-container {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            max-width: 80%;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 2px solid #3498db;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            pointer-events: auto;
+        }
+        
+        .health-bar {
+            flex: 1;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(to right, #e74c3c, #2ecc71);
+            width: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .health-text {
+            font-size: 0.9rem;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        /* Compact Controls - Bottom */
+        .controls-compact {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: none;
+        }
+        
+        /* Left Side - Movement */
+        .movement-compact {
+            width: 150px;
+            height: 150px;
+            position: relative;
+            pointer-events: none;
+        }
+        
+        .joystick-compact {
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            position: absolute;
+            pointer-events: auto;
+        }
+        
+        .joystick-handle-compact {
+            width: 60px;
+            height: 60px;
+            background: rgba(52, 152, 219, 0.8);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+        }
+        
+        /* Right Side - Skills Compact */
+        .skills-compact {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            pointer-events: auto;
+        }
+        
+        .skill-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            user-select: none;
+            position: relative;
+        }
+        
+        .skill-btn:active {
+            transform: scale(0.9);
+        }
+        
+        .skill-attack {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .skill-magic {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+        
+        .skill-jump {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            grid-column: span 2;
+            width: 130px;
+            height: 50px;
+            border-radius: 25px;
+            font-size: 1rem;
+        }
+        
+        .skill-heal {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+        
+        /* Cooldown overlay */
+        .cooldown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        /* Quick Stats - Bottom Center */
+        .quick-stats {
+            position: absolute;
+            bottom: 180px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 15px;
+            display: flex;
+            gap: 20px;
+            font-size: 0.8rem;
+            pointer-events: auto;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .stat-value {
+            color: #ff9a00;
+            font-weight: bold;
+        }
+        
+        /* Enemy Info - Compact */
+        .enemy-compact {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 15px;
+            border: 2px solid #e74c3c;
+            display: none;
+            pointer-events: auto;
+            min-width: 200px;
+            text-align: center;
+        }
+        
+        .enemy-name {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .enemy-health {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        
+        .enemy-health-fill {
+            height: 100%;
+            background: linear-gradient(to right, #e74c3c, #ff9a00);
+            transition: width 0.3s ease;
+        }
+        
+        /* Camera Controls */
+        .camera-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            pointer-events: auto;
+        }
+        
+        .camera-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-bottom: 10px;
+            user-select: none;
+        }
+        
+        .camera-btn:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Damage Effect */
+        .damage-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(231, 76, 60, 0.3);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 5;
+        }
+        
+        /* Game Over */
+        .game-over-compact {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            pointer-events: auto;
+        }
+        
+        .game-over-compact h2 {
+            font-size: 2.5rem;
+            color: #ff9a00;
+            margin-bottom: 20px;
+        }
+        
+        .restart-btn-compact {
+            background: linear-gradient(135deg, #ff9a00, #ff6f00);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        /* Loading Screen */
+        .loading-minimal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        .loading-text-minimal {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #3498db;
+        }
+        
+        /* Performance Mode Toggle */
+        .performance-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            .health-container {
+                width: 250px;
+                padding: 6px 12px;
+            }
+            
+            .movement-compact {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .joystick-handle-compact {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .skill-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1rem;
+            }
+            
+            .skill-jump {
+                width: 110px;
+                height: 45px;
+            }
+            
+            .camera-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 1.3rem;
+            }
+            
+            .quick-stats {
+                bottom: 160px;
+                font-size: 0.7rem;
+                gap: 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .health-container {
+                width: 200px;
+                font-size: 0.8rem;
+            }
+            
+            .controls-compact {
+                padding: 0 10px;
+            }
+            
+            .movement-compact {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .joystick-handle-compact {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .skill-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 0.9rem;
+            }
+            
+            .skill-jump {
+                width: 100px;
+                height: 40px;
+                font-size: 0.9rem;
+            }
+            
+            .camera-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .quick-stats {
+                bottom: 140px;
+                font-size: 0.65rem;
+                gap: 10px;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="gameContainer"></div>
+    
+    <div class="loading-minimal" id="loadingScreen">
+        <div class="loading-text-minimal" id="loadingText">Đang tải...</div>
+    </div>
+    
+    <div class="ui-compact">
+        <div class="health-container">
+            <div class="health-bar">
+                <div class="health-fill" id="healthFill"></div>
+            </div>
+            <div class="health-text" id="healthText">100/100</div>
+            <div class="health-text" id="manaText">50/50</div>
+        </div>
+        
+        <div class="enemy-compact" id="enemyInfo">
+            <div class="enemy-name" id="enemyName">Goblin</div>
+            <div class="enemy-health">
+                <div class="enemy-health-fill" id="enemyHealthFill"></div>
+            </div>
+            <div style="font-size: 0.8rem;" id="enemyDistance">0m</div>
+        </div>
+        
+        <div class="quick-stats">
+            <div class="stat-item">
+                <span>Cấp:</span>
+                <span class="stat-value" id="levelText">1</span>
+            </div>
+            <div class="stat-item">
+                <span>Vàng:</span>
+                <span class="stat-value" id="goldText">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Quái:</span>
+                <span class="stat-value" id="killText">0</span>
+            </div>
+        </div>
+        
+        <div class="controls-compact">
+            <div class="movement-compact">
+                <div class="joystick-compact" id="joystickArea">
+                    <div class="joystick-handle-compact" id="joystickHandle"></div>
+                </div>
+            </div>
+            
+            <div class="skills-compact">
+                <button class="skill-btn skill-attack" id="attackBtn">
+                    ⚔️
+                    <div class="cooldown-overlay" id="attackCooldown"></div>
+                </button>
+                <button class="skill-btn skill-magic" id="magicBtn">
+                    ✨
+                    <div class="cooldown-overlay" id="magicCooldown"></div>
+                </button>
+                <button class="skill-btn skill-heal" id="healBtn">
+                    ❤️
+                    <div class="cooldown-overlay" id="healCooldown"></div>
+                </button>
+                <button class="skill-btn skill-jump" id="jumpBtn">
+                    NHẢY
+                </button>
+            </div>
+        </div>
+        
+        <div class="camera-controls">
+            <div class="camera-btn" id="lookLeftBtn">←</div>
+            <div class="camera-btn" id="lookRightBtn">→</div>
+        </div>
+        
+        <div class="performance-toggle" id="performanceToggle">
+            Hiệu năng: Cao
+        </div>
+        
+        <div class="damage-flash" id="damageFlash"></div>
+        
+        <div class="game-over-compact" id="gameOverScreen">
+            <h2>GAME OVER</h2>
+            <div style="text-align: center;">
+                <p>Bạn đã tiêu diệt <span id="finalKills" style="color:#ff9a00">0</span> quái vật!</p>
+                <p>Cấp: <span id="finalLevel" style="color:#ff9a00">1</span></p>
+                <p>Vàng: <span id="finalGold" style="color:#ff9a00">0</span></p>
+            </div>
+            <button class="restart-btn-compact" id="restartBtn">CHƠI LẠI</button>
+        </div>
+    </div>
+
+    <script>
+        // ================ CẤU HÌNH TỐI ƯU ================
+        const OPTIMIZATION = {
+            highPerformance: true,
+            maxEnemies: 8,
+            maxEffects: 20,
+            shadowQuality: 'low', // 'low', 'medium', 'high'
+            renderScale: 1.0
+        };
+        
+        // ================ KHAI BÁO BIẾN ================
+        let scene, camera, renderer;
+        let player, playerDirection = new THREE.Vector3(0, 0, -1);
+        let enemies = [];
+        let clock = new THREE.Clock();
+        
+        // Movement
+        let moveInput = { x: 0, z: 0 };
+        let velocity = new THREE.Vector3();
+        let isJumping = false;
+        let canJump = true;
+        
+        // Joystick
+        let joystickActive = false;
+        let joystickVector = new THREE.Vector2(0, 0);
+        let joystickStartPos = null;
+        
+        // Camera rotation
+        let cameraRotation = 0;
+        let targetCameraRotation = 0;
+        
+        // Game state
+        let gameState = {
+            player: {
+                hp: 100,
+                maxHP: 100,
+                mana: 50,
+                maxMana: 50,
+                level: 1,
+                exp: 0,
+                expToNextLevel: 100,
+                gold: 0,
+                kills: 0,
+                damage: 15,
+                magicDamage: 25,
+                speed: 0.1,
+                jumpForce: 5
+            },
+            cooldowns: {
+                attack: 0,
+                magic: 0,
+                heal: 0
+            },
+            currentEnemy: null,
+            gameOver: false
+        };
+        
+        // Performance tracking
+        let lastFrameTime = 0;
+        let fps = 60;
+        let effectPool = [];
+        
+        // ================ KHỞI TẠO GAME ================
+        function init() {
+            // Tạo scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.Fog(0x87ceeb, 10, 100);
+            
+            // Tạo camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 8, 12);
+            
+            // Tạo renderer với tối ưu
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: !OPTIMIZATION.highPerformance,
+                powerPreference: "high-performance"
+            });
+            
+            renderer.setSize(window.innerWidth * OPTIMIZATION.renderScale, 
+                           window.innerHeight * OPTIMIZATION.renderScale);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            
+            if (OPTIMIZATION.shadowQuality !== 'low') {
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = OPTIMIZATION.shadowQuality === 'high' ? 
+                    THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
+            }
+            
+            document.getElementById('gameContainer').appendChild(renderer.domElement);
+            
+            // Tối ưu hóa scene
+            setupOptimizedScene();
+            
+            // Tạo player
+            createOptimizedPlayer();
+            
+            // Tạo quái vật
+            createOptimizedEnemies(5);
+            
+            // Thiết lập điều khiển
+            setupOptimizedControls();
+            
+            // Ẩn loading screen
+            setTimeout(() => {
+                document.getElementById('loadingScreen').style.display = 'none';
+                showEnemyInfo("Goblin", 50, 50);
+            }, 500);
+            
+            // Bắt đầu game loop
+            animate();
+        }
+        
+        // ================ SCENE TỐI ƯU ================
+        function setupOptimizedScene() {
+            // Tối giản ánh sáng
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 50, 50);
+            if (OPTIMIZATION.shadowQuality !== 'low') {
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 512;
+                directionalLight.shadow.mapSize.height = 512;
+            }
+            scene.add(directionalLight);
+            
+            // Tạo terrain đơn giản
+            createSimpleTerrain();
+        }
+        
+        function createSimpleTerrain() {
+            // Mặt đất đơn giản
+            const groundGeometry = new THREE.PlaneGeometry(200, 200);
+            const groundMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x3d7c47
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = OPTIMIZATION.shadowQuality !== 'low';
+            scene.add(ground);
+            
+            // Vài cây đơn giản
+            for (let i = 0; i < 30; i++) {
+                const tree = createSimpleTree();
+                tree.position.set(
+                    (Math.random() - 0.5) * 180,
+                    0,
+                    (Math.random() - 0.5) * 180
+                );
+                scene.add(tree);
+            }
+        }
+        
+        function createSimpleTree() {
+            const tree = new THREE.Group();
+            
+            // Thân cây
+            const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 2, 6);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = 1;
+            tree.add(trunk);
+            
+            // Lá cây
+            const leavesGeometry = new THREE.ConeGeometry(1.5, 3, 6);
+            const leavesMaterial = new THREE.MeshLambertMaterial({ color: 0x27ae60 });
+            const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+            leaves.position.y = 2.5;
+            tree.add(leaves);
+            
+            tree.traverse(child => {
+                if (child.isMesh) {
+                    child.castShadow = OPTIMIZATION.shadowQuality !== 'low';
+                }
+            });
+            
+            return tree;
+        }
+        
+        // ================ PLAYER TỐI ƯU ================
+        function createOptimizedPlayer() {
+            player = new THREE.Group();
+            
+            // Sử dụng geometry đơn giản
+            const bodyGeometry = new THREE.CapsuleGeometry(0.5, 1.5, 4, 8);
+            const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x3498db });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.castShadow = OPTIMIZATION.shadowQuality !== 'low';
+            player.add(body);
+            
+            player.position.set(0, 2, 0);
+            player.castShadow = OPTIMIZATION.shadowQuality !== 'low';
+            scene.add(player);
+        }
+        
+        // ================ QUÁI VẬT TỐI ƯU ================
+        function createOptimizedEnemies(count) {
+            count = Math.min(count, OPTIMIZATION.maxEnemies);
+            
+            for (let i = 0; i < count; i++) {
+                createOptimizedEnemy();
+            }
+        }
+        
+        function createOptimizedEnemy() {
+            const enemyTypes = [
+                { name: 'Goblin', color: 0xe74c3c, scale: 0.8, hp: 30, damage: 10 },
+                { name: 'Orc', color: 0x27ae60, scale: 1.0, hp: 50, damage: 15 },
+                { name: 'Wolf', color: 0x95a5a6, scale: 0.9, hp: 40, damage: 12 }
+            ];
+            
+            const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+            const enemy = new THREE.Group();
+            
+            // Sử dụng geometry đơn giản
+            const bodyGeometry = new THREE.CapsuleGeometry(0.4 * type.scale, 1.2 * type.scale, 4, 8);
+            const bodyMaterial = new THREE.MeshLambertMaterial({ color: type.color });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            enemy.add(body);
+            
+            // Vị trí ngẫu nhiên
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 15 + Math.random() * 25;
+            enemy.position.set(
+                Math.cos(angle) * distance,
+                1.5,
+                Math.sin(angle) * distance
+            );
+            
+            enemy.userData = {
+                type: 'enemy',
+                enemyType: type.name,
+                hp: type.hp,
+                maxHP: type.hp,
+                damage: type.damage,
+                speed: 0.03,
+                attackRange: 2.5,
+                attackCooldown: 0
+            };
+            
+            enemy.castShadow = OPTIMIZATION.shadowQuality !== 'low';
+            scene.add(enemy);
+            enemies.push(enemy);
+            
+            return enemy;
+        }
+        
+        // ================ ĐIỀU KHIỂN TỐI ƯU ================
+        function setupOptimizedControls() {
+            // Joystick
+            const joystickArea = document.getElementById('joystickArea');
+            joystickArea.addEventListener('touchstart', handleJoystickStart);
+            joystickArea.addEventListener('mousedown', handleJoystickStart);
+            
+            document.addEventListener('touchmove', handleJoystickMove);
+            document.addEventListener('mousemove', handleJoystickMove);
+            document.addEventListener('touchend', handleJoystickEnd);
+            document.addEventListener('mouseup', handleJoystickEnd);
+            
+            // Keyboard
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            
+            // Skill buttons
+            document.getElementById('attackBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                playerAttack();
+            });
+            
+            document.getElementById('magicBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                playerMagic();
+            });
+            
+            document.getElementById('healBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                playerHeal();
+            });
+            
+            document.getElementById('jumpBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                playerJump();
+            });
+            
+            // Camera controls
+            document.getElementById('lookLeftBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                rotateCamera(-1);
+            });
+            
+            document.getElementById('lookRightBtn').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                rotateCamera(1);
+            });
+            
+            // Performance toggle
+            document.getElementById('performanceToggle').addEventListener('click', togglePerformance);
+            
+            // Restart
+            document.getElementById('restartBtn').addEventListener('click', restartGame);
+            
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Mouse click for desktop attack
+            renderer.domElement.addEventListener('click', (e) => {
+                if (!gameState.gameOver) {
+                    playerAttack();
+                }
+            });
+        }
+        
+        function handleJoystickStart(e) {
+            e.preventDefault();
+            joystickActive = true;
+            
+            const touch = e.type.includes('mouse') ? e : e.touches[0];
+            const rect = document.getElementById('joystickArea').getBoundingClientRect();
+            
+            joystickStartPos = {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2,
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            };
+        }
+        
+        function handleJoystickMove(e) {
+            if (!joystickActive) return;
+            e.preventDefault();
+            
+            const touch = e.type.includes('mouse') ? e : e.touches[0];
+            
+            if (joystickStartPos) {
+                const dx = touch.clientX - joystickStartPos.clientX;
+                const dy = touch.clientY - joystickStartPos.clientY;
+                
+                const maxDistance = 40;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const scale = distance > maxDistance ? maxDistance / distance : 1;
+                
+                joystickVector.set(dx * scale / maxDistance, -dy * scale / maxDistance);
+                
+                // Cập nhật vị trí joystick handle
+                const handle = document.getElementById('joystickHandle');
+                handle.style.transform = `translate(${dx * scale}px, ${dy * scale}px)`;
+                
+                // Cập nhật movement input
+                moveInput.x = joystickVector.x;
+                moveInput.z = joystickVector.y;
+            }
+        }
+        
+        function handleJoystickEnd(e) {
+            e.preventDefault();
+            joystickActive = false;
+            joystickVector.set(0, 0);
+            moveInput.x = 0;
+            moveInput.z = 0;
+            
+            const handle = document.getElementById('joystickHandle');
+            handle.style.transform = 'translate(-50%, -50%)';
+        }
+        
+        function handleKeyDown(e) {
+            switch(e.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                    moveInput.z = -1;
+                    break;
+                case 's':
+                case 'arrowdown':
+                    moveInput.z = 1;
+                    break;
+                case 'a':
+                case 'arrowleft':
+                    moveInput.x = -1;
+                    break;
+                case 'd':
+                case 'arrowright':
+                    moveInput.x = 1;
+                    break;
+                case ' ':
+                    playerJump();
+                    break;
+                case 'q':
+                    rotateCamera(-1);
+                    break;
+                case 'e':
+                    rotateCamera(1);
+                    break;
+            }
+        }
+        
+        function handleKeyUp(e) {
+            switch(e.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                case 's':
+                case 'arrowdown':
+                    moveInput.z = 0;
+                    break;
+                case 'a':
+                case 'arrowleft':
+                case 'd':
+                case 'arrowright':
+                    moveInput.x = 0;
+                    break;
+            }
+        }
+        
+        function rotateCamera(direction) {
+            targetCameraRotation += direction * Math.PI / 4;
+        }
+        
+        // ================ GAME LOGIC TỐI ƯU ================
+        function updatePlayer(deltaTime) {
+            if (gameState.gameOver) return;
+            
+            // Update cooldowns
+            updateCooldowns(deltaTime);
+            
+            // Movement
+            const speed = gameState.player.speed * 60 * deltaTime;
+            velocity.x = moveInput.x * speed;
+            velocity.z = moveInput.z * speed;
+            
+            // Normalize diagonal
+            if (velocity.x !== 0 && velocity.z !== 0) {
+                velocity.multiplyScalar(0.7071);
+            }
+            
+            // Apply rotation based on camera
+            const rotatedVelocity = velocity.clone();
+            rotatedVelocity.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraRotation);
+            
+            player.position.x += rotatedVelocity.x;
+            player.position.z += rotatedVelocity.z;
+            
+            // Boundary check
+            player.position.x = Math.max(-95, Math.min(95, player.position.x));
+            player.position.z = Math.max(-95, Math.min(95, player.position.z));
+            
+            // Gravity and jumping
+            if (player.position.y > 1) {
+                player.position.y -= 0.15 * 60 * deltaTime;
+                isJumping = true;
+            } else {
+                player.position.y = 1;
+                isJumping = false;
+                canJump = true;
+            }
+            
+            // Update camera rotation
+            cameraRotation += (targetCameraRotation - cameraRotation) * 0.1;
+            
+            // Update camera
+            updateCamera();
+        }
+        
+        function updateEnemies(deltaTime) {
+            let closestEnemy = null;
+            let closestDistance = Infinity;
+            
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                
+                if (enemy.userData.attackCooldown > 0) {
+                    enemy.userData.attackCooldown -= deltaTime;
+                }
+                
+                const distance = player.position.distanceTo(enemy.position);
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestEnemy = enemy;
+                }
+                
+                // Simple AI
+                if (distance < 20) {
+                    const direction = new THREE.Vector3();
+                    direction.subVectors(player.position, enemy.position).normalize();
+                    
+                    enemy.position.x += direction.x * enemy.userData.speed * 60 * deltaTime;
+                    enemy.position.z += direction.z * enemy.userData.speed * 60 * deltaTime;
+                    
+                    // Rotate to face player
+                    enemy.rotation.y = Math.atan2(direction.x, direction.z);
+                    
+                    // Attack if in range
+                    if (distance < enemy.userData.attackRange && enemy.userData.attackCooldown <= 0) {
+                        enemyAttack(enemy);
+                    }
+                }
+                
+                if (enemy.userData.hp <= 0) {
+                    enemyDefeated(enemy);
+                    enemies.splice(i, 1);
+                    scene.remove(enemy);
+                }
+            }
+            
+            // Update enemy info
+            if (closestEnemy && closestDistance < 30) {
+                gameState.currentEnemy = closestEnemy;
+                showEnemyInfo(
+                    closestEnemy.userData.enemyType,
+                    closestEnemy.userData.hp,
+                    closestEnemy.userData.maxHP,
+                    Math.floor(closestDistance)
+                );
+            } else {
+                hideEnemyInfo();
+            }
+        }
+        
+        function updateCamera() {
+            const cameraDistance = 10;
+            const cameraHeight = 5;
+            
+            // Calculate camera position based on player rotation
+            const cameraOffset = new THREE.Vector3(
+                0,
+                cameraHeight,
+                cameraDistance
+            );
+            
+            cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraRotation);
+            
+            camera.position.copy(player.position).add(cameraOffset);
+            camera.lookAt(player.position);
+        }
+        
+        // ================ COMBAT TỐI ƯU ================
+        function playerAttack() {
+            if (gameState.gameOver || gameState.cooldowns.attack > 0) return;
+            
+            gameState.cooldowns.attack = 0.5;
+            showCooldown('attack', 0.5);
+            
+            createSimpleEffect(player.position, 0xff9900, 1);
+            
+            const attackRange = 3;
+            let hit = false;
+            
+            enemies.forEach(enemy => {
+                const distance = player.position.distanceTo(enemy.position);
+                if (distance < attackRange) {
+                    const damage = gameState.player.damage + Math.floor(Math.random() * 5);
+                    enemy.userData.hp -= damage;
+                    hit = true;
+                    
+                    if (enemy.userData.hp <= 0) {
+                        gameState.player.kills++;
+                        updateKillCount();
+                    }
+                }
+            });
+            
+            updateUI();
+        }
+        
+        function playerMagic() {
+            if (gameState.gameOver || gameState.cooldowns.magic > 0 || gameState.player.mana < 10) return;
+            
+            gameState.cooldowns.magic = 1.5;
+            gameState.player.mana -= 10;
+            showCooldown('magic', 1.5);
+            
+            createSimpleEffect(player.position, 0x9b59b6, 1.5);
+            
+            const magicRange = 6;
+            let hitCount = 0;
+            
+            enemies.forEach(enemy => {
+                const distance = player.position.distanceTo(enemy.position);
+                if (distance < magicRange) {
+                    const damage = gameState.player.magicDamage + Math.floor(Math.random() * 8);
+                    enemy.userData.hp -= damage;
+                    hitCount++;
+                    
+                    if (enemy.userData.hp <= 0) {
+                        gameState.player.kills++;
+                        updateKillCount();
+                    }
+                }
+            });
+            
+            updateUI();
+        }
+        
+        function playerHeal() {
+            if (gameState.gameOver || gameState.cooldowns.heal > 0 || gameState.player.mana < 20) return;
+            
+            gameState.cooldowns.heal = 3;
+            gameState.player.mana -= 20;
+            showCooldown('heal', 3);
+            
+            const healAmount = 30;
+            gameState.player.hp = Math.min(gameState.player.maxHP, gameState.player.hp + healAmount);
+            
+            createSimpleEffect(player.position, 0x2ecc71, 0.8);
+            updateUI();
+        }
+        
+        function playerJump() {
+            if (gameState.gameOver || !canJump) return;
+            
+            canJump = false;
+            player.position.y += gameState.player.jumpForce;
+        }
+        
+        function enemyAttack(enemy) {
+            enemy.userData.attackCooldown = 2;
+            
+            const distance = player.position.distanceTo(enemy.position);
+            if (distance < enemy.userData.attackRange) {
+                const damage = enemy.userData.damage + Math.floor(Math.random() * 3);
+                gameState.player.hp -= damage;
+                
+                showDamageFlash();
+                
+                if (gameState.player.hp <= 0) {
+                    gameOver();
+                }
+                
+                updateUI();
+            }
+        }
+        
+        function enemyDefeated(enemy) {
+            gameState.player.gold += 10;
+            gameState.player.exp += 20;
+            
+            if (gameState.player.exp >= gameState.player.expToNextLevel) {
+                levelUp();
+            }
+            
+            // Tạo enemy mới
+            setTimeout(() => {
+                if (!gameState.gameOver && enemies.length < OPTIMIZATION.maxEnemies) {
+                    createOptimizedEnemy();
+                }
+            }, 2000 + Math.random() * 2000);
+        }
+        
+        function levelUp() {
+            gameState.player.level++;
+            gameState.player.exp -= gameState.player.expToNextLevel;
+            gameState.player.expToNextLevel = Math.floor(gameState.player.expToNextLevel * 1.5);
+            
+            gameState.player.maxHP += 20;
+            gameState.player.hp = gameState.player.maxHP;
+            gameState.player.maxMana += 10;
+            gameState.player.mana = gameState.player.maxMana;
+            gameState.player.damage += 5;
+            gameState.player.magicDamage += 8;
+            gameState.player.speed += 0.01;
+            
+            updateUI();
+        }
+        
+        // ================ UI UPDATES ================
+        function updateUI() {
+            const hpPercent = (gameState.player.hp / gameState.player.maxHP) * 100;
+            const manaPercent = (gameState.player.mana / gameState.player.maxMana) * 100;
+            
+            document.getElementById('healthFill').style.width = `${hpPercent}%`;
+            document.getElementById('healthText').textContent = `${gameState.player.hp}/${gameState.player.maxHP}`;
+            document.getElementById('manaText').textContent = `${gameState.player.mana}/${gameState.player.maxMana}`;
+            
+            document.getElementById('levelText').textContent = gameState.player.level;
+            document.getElementById('goldText').textContent = gameState.player.gold;
+        }
+        
+        function updateKillCount() {
+            document.getElementById('killText').textContent = gameState.player.kills;
+        }
+        
+        function showEnemyInfo(name, hp, maxHP, distance = 0) {
+            const enemyInfo = document.getElementById('enemyInfo');
+            const hpPercent = (hp / maxHP) * 100;
+            
+            document.getElementById('enemyName').textContent = name;
+            document.getElementById('enemyHealthFill').style.width = `${hpPercent}%`;
+            document.getElementById('enemyDistance').textContent = `${distance}m`;
+            
+            enemyInfo.style.display = 'block';
+        }
+        
+        function hideEnemyInfo() {
+            document.getElementById('enemyInfo').style.display = 'none';
+        }
+        
+        function showCooldown(skill, duration) {
+            const cooldownElement = document.getElementById(`${skill}Cooldown`);
+            cooldownElement.textContent = duration.toFixed(1);
+            cooldownElement.style.display = 'flex';
+            
+            let remaining = duration;
+            const interval = setInterval(() => {
+                remaining -= 0.1;
+                if (remaining <= 0) {
+                    cooldownElement.style.display = 'none';
+                    clearInterval(interval);
+                } else {
+                    cooldownElement.textContent = remaining.toFixed(1);
+                }
+            }, 100);
+        }
+        
+        function updateCooldowns(deltaTime) {
+            if (gameState.cooldowns.attack > 0) {
+                gameState.cooldowns.attack -= deltaTime;
+            }
+            if (gameState.cooldowns.magic > 0) {
+                gameState.cooldowns.magic -= deltaTime;
+            }
+            if (gameState.cooldowns.heal > 0) {
+                gameState.cooldowns.heal -= deltaTime;
+            }
+        }
+        
+        function showDamageFlash() {
+            const flash = document.getElementById('damageFlash');
+            flash.style.opacity = '0.5';
+            
+            setTimeout(() => {
+                flash.style.opacity = '0';
+            }, 200);
+        }
+        
+        function gameOver() {
+            gameState.gameOver = true;
+            
+            document.getElementById('finalKills').textContent = gameState.player.kills;
+            document.getElementById('finalLevel').textContent = gameState.player.level;
+            document.getElementById('finalGold').textContent = gameState.player.gold;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+        }
+        
+        function restartGame() {
+            location.reload();
+        }
+        
+        // ================ HIỆU ỨNG TỐI ƯU ================
+        function createSimpleEffect(position, color, size) {
+            if (effectPool.length >= OPTIMIZATION.maxEffects) {
+                return;
+            }
+            
+            const geometry = new THREE.SphereGeometry(size, 8, 8);
+            const material = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const effect = new THREE.Mesh(geometry, material);
+            effect.position.copy(position);
+            effect.position.y += 2;
+            scene.add(effect);
+            
+            effectPool.push(effect);
+            
+            let opacity = 0.8;
+            const animate = () => {
+                opacity -= 0.05;
+                material.opacity = opacity;
+                effect.scale.multiplyScalar(1.05);
+                
+                if (opacity > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    scene.remove(effect);
+                    const index = effectPool.indexOf(effect);
+                    if (index > -1) {
+                        effectPool.splice(index, 1);
+                    }
+                }
+            };
+            animate();
+        }
+        
+        // ================ TỐI ƯU HIỆU NĂNG ================
+        function togglePerformance() {
+            OPTIMIZATION.highPerformance = !OPTIMIZATION.highPerformance;
+            
+            if (OPTIMIZATION.highPerformance) {
+                OPTIMIZATION.maxEnemies = 8;
+                OPTIMIZATION.maxEffects = 20;
+                OPTIMIZATION.shadowQuality = 'low';
+                renderer.setPixelRatio(1);
+            } else {
+                OPTIMIZATION.maxEnemies = 15;
+                OPTIMIZATION.maxEffects = 40;
+                OPTIMIZATION.shadowQuality = 'medium';
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            }
+            
+            document.getElementById('performanceToggle').textContent = 
+                `Hiệu năng: ${OPTIMIZATION.highPerformance ? 'Cao' : 'Thấp'}`;
+            
+            // Cập nhật shadow settings
+            renderer.shadowMap.enabled = OPTIMIZATION.shadowQuality !== 'low';
+            
+            // Giới hạn số lượng enemy
+            if (enemies.length > OPTIMIZATION.maxEnemies) {
+                const toRemove = enemies.splice(OPTIMIZATION.maxEnemies);
+                toRemove.forEach(enemy => scene.remove(enemy));
+            }
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth * OPTIMIZATION.renderScale, 
+                           window.innerHeight * OPTIMIZATION.renderScale);
+        }
+        
+        // ================ GAME LOOP TỐI ƯU ================
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const currentTime = performance.now();
+            const deltaTime = (currentTime - lastFrameTime) / 1000;
+            lastFrameTime = currentTime;
+            
+            // Limit delta time to prevent large jumps
+            const clampedDelta = Math.min(deltaTime, 0.1);
+            
+            if (!gameState.gameOver) {
+                updatePlayer(clampedDelta);
+                updateEnemies(clampedDelta);
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // ================ START GAME ================
+        init();
+    </script>
+</body>
+</html>
