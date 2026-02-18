@@ -880,3 +880,55 @@
     </script>
 </body>
 </html>
+// ===== HACK VÔ HẠN ĐIỂM =====
+// Nhấn phím H để nhận 10000 điểm mỗi khi ăn
+let hackActive = false;
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'h' || e.key === 'H') {
+        hackActive = !hackActive;
+        alert(`🔓 Hack điểm: ${hackActive ? 'BẬT' : 'TẮT'} - Mỗi lần ăn được 10000đ`);
+    }
+});
+
+// Tìm chỗ xử lý ăn thức ăn trong function update()
+// Thêm đoạn code này vào NGAY TRONG phần kiểm tra ăn thức ăn
+
+/* 
+CÁCH GHÉP:
+Tìm trong function update() đoạn code xử lý ăn thức ăn thường:
+
+if (head.x === food.x && head.y === food.y) {
+    score += 10;
+    ...
+}
+
+Sửa thành:
+
+if (head.x === food.x && head.y === food.y) {
+    if (hackActive) {
+        score += 10000;  // Hack: +10000 điểm
+    } else {
+        score += 10;     // Bình thường: +10 điểm
+    }
+    ...
+}
+
+Và đoạn xử lý ăn thức ăn đặc biệt:
+
+if (specialFood && head.x === specialFood.x && head.y === specialFood.y) {
+    score += 20;
+    ...
+}
+
+Sửa thành:
+
+if (specialFood && head.x === specialFood.x && head.y === specialFood.y) {
+    if (hackActive) {
+        score += 10000;  // Hack: +10000 điểm
+    } else {
+        score += 20;     // Bình thường: +20 điểm
+    }
+    ...
+}
+*/
