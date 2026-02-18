@@ -1,486 +1,946 @@
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Kích thước ô
-    const gridSize = 25;
-    const tileCount = canvas.width / gridSize;
-    
-    // Game state
-    let snake = [{x: 10, y: 10}];
-    let direction = {x: 0, y: 0};
-    let nextDirection = {x: 0, y: 0};
-    let food = {};
-    let specialFood = null;
-    let score = 0;
-    let highScore = localStorage.getItem('snakeHighScore') || 0;
-    let gameRunning = false;
-    let gamePaused = false;
-    let gameLoopInterval = null;
-    
-    // Tốc độ
-    let baseSpeed = 200;
-    let currentSpeed = 200;
-    let speedMultiplier = 1;
-    
-    // ===== HACK ĐIỂM =====
-    let hackActive = false;
-    let hackValue = 10000; // Số điểm nhận được khi hack
-    
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'h' || e.key === 'H') {
-            hackActive = !hackActive;
-            alert(`🔓 HACK MODE: ${hackActive ? 'BẬT' : 'TẮT'} - Mỗi lần ăn được +${hackValue} điểm!`);
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNAKE EVOLUTION - Phiên bản nâng cấp</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
         }
-    });
-    // ====================
-    
-    document.getElementById('highScore').textContent = highScore;
-    document.getElementById('snakeLength').textContent = snake.length;
-    
-    // Tạo thức ăn thường
-    function generateFood() {
-        let newFood;
-        let validPosition = false;
-        
-        while (!validPosition) {
-            newFood = {
-                x: Math.floor(Math.random() * tileCount),
-                y: Math.floor(Math.random() * tileCount)
-            };
-            
-            validPosition = true;
-            
-            for (let segment of snake) {
-                if (segment.x === newFood.x && segment.y === newFood.y) {
-                    validPosition = false;
-                    break;
-                }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 40px;
+            padding: 30px;
+            box-shadow: 0 30px 50px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .title {
+            font-size: 36px;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px 25px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            color: #00d2ff;
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .highscore .stat-value {
+            color: #ffd700;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            margin-bottom: 25px;
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.2);
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #0a0f1f;
+            border: 2px solid rgba(0, 210, 255, 0.3);
+        }
+
+        .level-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 1px solid #00d2ff;
+            color: #00d2ff;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .level-info span {
+            color: white;
+            margin-left: 5px;
+        }
+
+        .food-guide {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .guide-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 20px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .food-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .food-dot.normal {
+            background: #ff4757;
+            box-shadow: 0 0 15px #ff4757;
+        }
+
+        .food-dot.speed {
+            background: #00d2ff;
+            box-shadow: 0 0 15px #00d2ff;
+        }
+
+        .food-dot.golden {
+            background: #ffd700;
+            box-shadow: 0 0 15px #ffd700;
+        }
+
+        .guide-text {
+            color: white;
+            font-size: 14px;
+        }
+
+        .guide-text small {
+            color: #888;
+            margin-left: 5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 35px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn.primary {
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+            color: white;
+            box-shadow: 0 5px 20px rgba(0, 210, 255, 0.4);
+        }
+
+        .btn.warning {
+            background: linear-gradient(45deg, #ffd700, #ffa500);
+            color: #1a1a2e;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .btn.danger {
+            background: linear-gradient(45deg, #ff4757, #ff6b81);
+            color: white;
+            box-shadow: 0 5px 20px rgba(255, 71, 87, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .direction-pad {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .direction-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .dir-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .dir-btn:active {
+            transform: translateY(5px);
+            box-shadow: none;
+        }
+
+        .dir-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .game-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .game-overlay.active {
+            display: flex;
+        }
+
+        .overlay-content {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 50px;
+            border-radius: 40px;
+            text-align: center;
+            border: 1px solid #00d2ff;
+            box-shadow: 0 0 50px rgba(0, 210, 255, 0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .overlay-content h2 {
+            color: #00d2ff;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .overlay-content p {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        .overlay-content .score {
+            color: #ffd700;
+            font-size: 36px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 500px) {
+            .game-card {
+                padding: 20px;
             }
             
-            if (specialFood && newFood.x === specialFood.x && newFood.y === specialFood.y) {
-                validPosition = false;
+            .btn {
+                padding: 12px 25px;
+                font-size: 14px;
+            }
+            
+            .dir-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
             }
         }
+    </style>
+</head>
+<body>
+    <div class="game-card">
+        <div class="header">
+            <div class="title">SNAKE EVOLUTION</div>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Điểm</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat highscore">
+                    <div class="stat-label">Kỷ lục</div>
+                    <div class="stat-value" id="highScore">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+            <div class="level-info">
+                CẤP ĐỘ <span id="level">1</span>
+            </div>
+        </div>
+
+        <div class="food-guide">
+            <div class="guide-item">
+                <div class="food-dot normal"></div>
+                <div class="guide-text">Mồi thường <small>+10 điểm</small></div>
+            </div>
+            <div class="guide-item">
+                <div class="food-dot speed"></div>
+                <div class="guide-text">Mồi tốc độ <small>+20 điểm + tăng tốc</small></div>
+            </div>
+            <div class="guide-item">
+                <div class="food-dot golden"></div>
+                <div class="guide-text">Mồi vàng <small>+50 điểm + x2 điểm</small></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn primary" id="startBtn">▶ Bắt đầu</button>
+            <button class="btn warning" id="pauseBtn" disabled>⏸ Tạm dừng</button>
+            <button class="btn danger" id="resetBtn">🔄 Chơi lại</button>
+        </div>
+
+        <div class="direction-pad">
+            <div class="direction-row">
+                <button class="dir-btn" id="upBtn" disabled>↑</button>
+            </div>
+            <div class="direction-row">
+                <button class="dir-btn" id="leftBtn" disabled>←</button>
+                <button class="dir-btn" id="downBtn" disabled>↓</button>
+                <button class="dir-btn" id="rightBtn" disabled>→</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-overlay" id="gameOverlay">
+        <div class="overlay-content">
+            <h2>GAME OVER</h2>
+            <p>Điểm số của bạn</p>
+            <div class="score" id="finalScore">0</div>
+            <button class="btn primary" id="restartBtn" style="margin-top: 30px;">CHƠI LẠI</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
         
-        food = newFood;
-    }
-    
-    // Tạo thức ăn đặc biệt
-    function generateSpecialFood() {
-        if (Math.random() < 0.15 && !specialFood) {
-            let newSpecial;
+        // Kích thước ô
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+        
+        // Game state
+        let snake = [
+            {x: 10, y: 10}
+        ];
+        let direction = {x: 0, y: 0};
+        let nextDirection = {x: 0, y: 0};
+        let food = {};
+        let speedFood = null;
+        let goldenFood = null;
+        let score = 0;
+        let level = 1;
+        let highScore = localStorage.getItem('snakeHighScore') || 0;
+        let gameRunning = false;
+        let gamePaused = false;
+        let gameLoop = null;
+        
+        // Tốc độ game
+        let baseSpeed = 150;
+        let currentSpeed = 150;
+        
+        // Hiệu ứng nhân đôi điểm
+        let doubleScore = false;
+        let doubleScoreTime = 0;
+        
+        document.getElementById('highScore').textContent = highScore;
+        
+        // Tạo mồi thường
+        function generateFood() {
             let validPosition = false;
+            let newFood;
             
             while (!validPosition) {
-                newSpecial = {
+                newFood = {
                     x: Math.floor(Math.random() * tileCount),
-                    y: Math.floor(Math.random() * tileCount),
-                    type: Math.random() < 0.5 ? 'speed' : 'size'
+                    y: Math.floor(Math.random() * tileCount)
                 };
                 
                 validPosition = true;
                 
+                // Kiểm tra không trùng với rắn
                 for (let segment of snake) {
-                    if (segment.x === newSpecial.x && segment.y === newSpecial.y) {
+                    if (segment.x === newFood.x && segment.y === newFood.y) {
                         validPosition = false;
                         break;
                     }
                 }
                 
-                if (food.x === newSpecial.x && food.y === newSpecial.y) {
+                // Kiểm tra không trùng với mồi đặc biệt
+                if (speedFood && newFood.x === speedFood.x && newFood.y === speedFood.y) {
+                    validPosition = false;
+                }
+                if (goldenFood && newFood.x === goldenFood.x && newFood.y === goldenFood.y) {
                     validPosition = false;
                 }
             }
             
-            specialFood = newSpecial;
-            
-            setTimeout(() => {
-                specialFood = null;
-                draw();
-            }, 5000);
-        }
-    }
-    
-    // Vẽ game
-    function draw() {
-        ctx.fillStyle = '#0b1120';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Vẽ lưới
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 0.5;
-        for (let i = 0; i <= tileCount; i++) {
-            ctx.beginPath();
-            ctx.moveTo(i * gridSize, 0);
-            ctx.lineTo(i * gridSize, canvas.height);
-            ctx.strokeStyle = '#1e293b';
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(0, i * gridSize);
-            ctx.lineTo(canvas.width, i * gridSize);
-            ctx.stroke();
+            food = newFood;
         }
         
-        // Vẽ thức ăn thường
-        ctx.shadowColor = '#ef4444';
-        ctx.shadowBlur = 15;
-        ctx.fillStyle = '#ef4444';
-        ctx.beginPath();
-        ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/2 - 3, 0, Math.PI * 2);
-        ctx.fill();
+        // Tạo mồi tốc độ
+        function generateSpeedFood() {
+            if (Math.random() < 0.15 && !speedFood && !goldenFood) {
+                let validPosition = false;
+                let newFood;
+                
+                while (!validPosition) {
+                    newFood = {
+                        x: Math.floor(Math.random() * tileCount),
+                        y: Math.floor(Math.random() * tileCount)
+                    };
+                    
+                    validPosition = true;
+                    
+                    for (let segment of snake) {
+                        if (segment.x === newFood.x && segment.y === newFood.y) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                    
+                    if (food.x === newFood.x && food.y === newFood.y) {
+                        validPosition = false;
+                    }
+                }
+                
+                speedFood = newFood;
+                
+                // Tự biến mất sau 4 giây
+                setTimeout(() => {
+                    speedFood = null;
+                }, 4000);
+            }
+        }
         
-        // Vẽ thức ăn đặc biệt
-        if (specialFood) {
-            if (specialFood.type === 'speed') {
-                ctx.fillStyle = '#06b6d4';
-                ctx.shadowColor = '#06b6d4';
-            } else {
-                ctx.fillStyle = '#eab308';
-                ctx.shadowColor = '#eab308';
+        // Tạo mồi vàng
+        function generateGoldenFood() {
+            if (Math.random() < 0.1 && !goldenFood && !speedFood) {
+                let validPosition = false;
+                let newFood;
+                
+                while (!validPosition) {
+                    newFood = {
+                        x: Math.floor(Math.random() * tileCount),
+                        y: Math.floor(Math.random() * tileCount)
+                    };
+                    
+                    validPosition = true;
+                    
+                    for (let segment of snake) {
+                        if (segment.x === newFood.x && segment.y === newFood.y) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                    
+                    if (food.x === newFood.x && food.y === newFood.y) {
+                        validPosition = false;
+                    }
+                }
+                
+                goldenFood = newFood;
+                
+                // Tự biến mất sau 3 giây
+                setTimeout(() => {
+                    goldenFood = null;
+                }, 3000);
+            }
+        }
+        
+        // Vẽ game
+        function draw() {
+            // Xóa canvas
+            ctx.fillStyle = '#0a0f1f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Vẽ hiệu ứng nền
+            ctx.strokeStyle = 'rgba(0, 210, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= tileCount; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
             }
             
+            // Vẽ mồi thường
+            ctx.shadowColor = '#ff4757';
             ctx.shadowBlur = 15;
+            ctx.fillStyle = '#ff4757';
             ctx.beginPath();
-            ctx.arc(specialFood.x * gridSize + gridSize/2, specialFood.y * gridSize + gridSize/2, gridSize/2 - 3, 0, Math.PI * 2);
+            ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/2 - 3, 0, Math.PI * 2);
             ctx.fill();
             
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(specialFood.type === 'speed' ? '⚡' : '⭐', 
-                       specialFood.x * gridSize + gridSize/2, 
-                       specialFood.y * gridSize + gridSize/2);
-        }
-        
-        // Vẽ rắn
-        ctx.shadowBlur = 10;
-        for (let i = 0; i < snake.length; i++) {
-            const segment = snake[i];
+            // Vẽ mồi tốc độ
+            if (speedFood) {
+                ctx.shadowColor = '#00d2ff';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = '#00d2ff';
+                ctx.beginPath();
+                ctx.arc(speedFood.x * gridSize + gridSize/2, speedFood.y * gridSize + gridSize/2, gridSize/2 - 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('⚡', speedFood.x * gridSize + gridSize/2, speedFood.y * gridSize + gridSize/2);
+            }
             
-            if (i === 0) {
-                ctx.fillStyle = '#22c55e';
-                ctx.shadowColor = '#22c55e';
-            } else {
+            // Vẽ mồi vàng
+            if (goldenFood) {
+                ctx.shadowColor = '#ffd700';
+                ctx.shadowBlur = 25;
+                ctx.fillStyle = '#ffd700';
+                ctx.beginPath();
+                ctx.arc(goldenFood.x * gridSize + gridSize/2, goldenFood.y * gridSize + gridSize/2, gridSize/2 - 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#1a1a2e';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('✨', goldenFood.x * gridSize + gridSize/2, goldenFood.y * gridSize + gridSize/2);
+            }
+            
+            // Vẽ hiệu ứng nhân đôi điểm
+            if (doubleScore) {
+                ctx.shadowBlur = 30;
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.2)';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText('x2 ĐIỂM', canvas.width - 20, 70);
+            }
+            
+            // Vẽ rắn
+            for (let i = 0; i < snake.length; i++) {
+                const segment = snake[i];
+                
+                // Hiệu ứng gradient cho rắn
                 const gradient = ctx.createLinearGradient(
-                    segment.x * gridSize, 
+                    segment.x * gridSize,
                     segment.y * gridSize,
-                    segment.x * gridSize + gridSize, 
+                    segment.x * gridSize + gridSize,
                     segment.y * gridSize + gridSize
                 );
-                gradient.addColorStop(0, '#4ade80');
-                gradient.addColorStop(1, '#16a34a');
+                
+                if (i === 0) {
+                    gradient.addColorStop(0, '#00d2ff');
+                    gradient.addColorStop(1, '#3a7bd5');
+                    ctx.shadowColor = '#00d2ff';
+                } else {
+                    gradient.addColorStop(0, '#4facfe');
+                    gradient.addColorStop(1, '#00f2fe');
+                    ctx.shadowColor = '#4facfe';
+                }
+                
                 ctx.fillStyle = gradient;
-                ctx.shadowColor = '#4ade80';
+                ctx.shadowBlur = 10;
+                
+                // Vẽ thân với góc bo
+                ctx.beginPath();
+                ctx.roundRect(segment.x * gridSize + 2, segment.y * gridSize + 2, 
+                            gridSize - 4, gridSize - 4, 8);
+                ctx.fill();
+                
+                // Vẽ mắt cho đầu rắn
+                if (i === 0) {
+                    ctx.fillStyle = 'white';
+                    ctx.shadowBlur = 0;
+                    
+                    // Mắt trái
+                    ctx.beginPath();
+                    ctx.arc(segment.x * gridSize + gridSize/2 - 4, 
+                           segment.y * gridSize + gridSize/2 - 4, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Mắt phải
+                    ctx.beginPath();
+                    ctx.arc(segment.x * gridSize + gridSize/2 + 4, 
+                           segment.y * gridSize + gridSize/2 - 4, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Con ngươi
+                    ctx.fillStyle = '#0a0f1f';
+                    ctx.beginPath();
+                    ctx.arc(segment.x * gridSize + gridSize/2 - 4, 
+                           segment.y * gridSize + gridSize/2 - 4, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(segment.x * gridSize + gridSize/2 + 4, 
+                           segment.y * gridSize + gridSize/2 - 4, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
             
-            ctx.beginPath();
-            ctx.roundRect(segment.x * gridSize + 2, segment.y * gridSize + 2, 
-                        gridSize - 4, gridSize - 4, 8);
-            ctx.fill();
-            
-            if (i === 0) {
-                ctx.fillStyle = 'white';
-                ctx.shadowBlur = 0;
-                
-                ctx.beginPath();
-                ctx.arc(segment.x * gridSize + gridSize/2 - 5, 
-                       segment.y * gridSize + gridSize/2 - 4, 3, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.beginPath();
-                ctx.arc(segment.x * gridSize + gridSize/2 + 5, 
-                       segment.y * gridSize + gridSize/2 - 4, 3, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.fillStyle = '#0f172a';
-                ctx.beginPath();
-                ctx.arc(segment.x * gridSize + gridSize/2 - 5, 
-                       segment.y * gridSize + gridSize/2 - 4, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.beginPath();
-                ctx.arc(segment.x * gridSize + gridSize/2 + 5, 
-                       segment.y * gridSize + gridSize/2 - 4, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            ctx.shadowBlur = 0;
         }
         
-        // Vẽ thông báo hack nếu đang bật
-        if (hackActive) {
-            ctx.shadowBlur = 20;
-            ctx.fillStyle = '#facc15';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'right';
-            ctx.fillText('🔓 HACK MODE', canvas.width - 20, 40);
-            ctx.font = 'bold 16px Arial';
-            ctx.fillStyle = '#ef4444';
-            ctx.fillText(`+${hackValue} điểm/mồi`, canvas.width - 20, 70);
-        }
-        
-        ctx.shadowBlur = 0;
-    }
-    
-    // Helper function cho roundRect
-    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
-        if (w < 2 * r) r = w / 2;
-        if (h < 2 * r) r = h / 2;
-        this.moveTo(x + r, y);
-        this.lineTo(x + w - r, y);
-        this.quadraticCurveTo(x + w, y, x + w, y + r);
-        this.lineTo(x + w, y + h - r);
-        this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        this.lineTo(x + r, y + h);
-        this.quadraticCurveTo(x, y + h, x, y + h - r);
-        this.lineTo(x, y + r);
-        this.quadraticCurveTo(x, y, x + r, y);
-        this.closePath();
-        return this;
-    };
-    
-    // Cập nhật game
-    function update() {
-        if (!gameRunning || gamePaused) return;
-        
-        direction = {...nextDirection};
-        
-        const head = {
-            x: snake[0].x + direction.x,
-            y: snake[0].y + direction.y
+        // Helper function
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            this.moveTo(x + r, y);
+            this.lineTo(x + w - r, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + r);
+            this.lineTo(x + w, y + h - r);
+            this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            this.lineTo(x + r, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - r);
+            this.lineTo(x, y + r);
+            this.quadraticCurveTo(x, y, x + r, y);
+            this.closePath();
+            return this;
         };
         
-        if (head.x < 0) head.x = tileCount - 1;
-        if (head.x >= tileCount) head.x = 0;
-        if (head.y < 0) head.y = tileCount - 1;
-        if (head.y >= tileCount) head.y = 0;
-        
-        for (let i = 0; i < snake.length; i++) {
-            if (head.x === snake[i].x && head.y === snake[i].y) {
-                gameOver();
-                return;
-            }
-        }
-        
-        snake.unshift(head);
-        
-        // Kiểm tra ăn thức ăn thường - ĐÃ HACK
-        if (head.x === food.x && head.y === food.y) {
-            // ===== HACK ĐIỂM =====
-            if (hackActive) {
-                score += hackValue;  // +10000 điểm khi hack
-            } else {
-                score += 10;          // +10 điểm bình thường
-            }
-            // ====================
+        // Cập nhật game
+        function update() {
+            if (!gameRunning || gamePaused) return;
             
+            // Cập nhật hướng
+            direction = {...nextDirection};
+            
+            // Đầu rắn mới
+            const head = {
+                x: snake[0].x + direction.x,
+                y: snake[0].y + direction.y
+            };
+            
+            // Xuyên tường
+            if (head.x < 0) head.x = tileCount - 1;
+            if (head.x >= tileCount) head.x = 0;
+            if (head.y < 0) head.y = tileCount - 1;
+            if (head.y >= tileCount) head.y = 0;
+            
+            // Kiểm tra va chạm thân
+            for (let i = 0; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            snake.unshift(head);
+            
+            // Tính điểm cơ bản
+            let pointsEarned = 0;
+            
+            // Kiểm tra ăn mồi thường
+            if (head.x === food.x && head.y === food.y) {
+                pointsEarned = doubleScore ? 20 : 10;
+                score += pointsEarned;
+                
+                generateFood();
+                generateSpeedFood();
+                generateGoldenFood();
+            }
+            // Kiểm tra ăn mồi tốc độ
+            else if (speedFood && head.x === speedFood.x && head.y === speedFood.y) {
+                pointsEarned = doubleScore ? 40 : 20;
+                score += pointsEarned;
+                
+                // Tăng tốc
+                currentSpeed = Math.max(80, currentSpeed - 10);
+                level = Math.floor(150 / currentSpeed * 2);
+                document.getElementById('level').textContent = level;
+                
+                speedFood = null;
+                
+                // Cập nhật game loop
+                if (gameLoop) {
+                    clearInterval(gameLoop);
+                    gameLoop = setInterval(update, currentSpeed);
+                }
+            }
+            // Kiểm tra ăn mồi vàng
+            else if (goldenFood && head.x === goldenFood.x && head.y === goldenFood.y) {
+                pointsEarned = 50;
+                score += pointsEarned;
+                
+                // Kích hoạt nhân đôi điểm trong 5 giây
+                doubleScore = true;
+                doubleScoreTime = 5;
+                
+                goldenFood = null;
+            }
+            else {
+                snake.pop();
+            }
+            
+            // Cập nhật hiệu ứng nhân đôi
+            if (doubleScore) {
+                doubleScoreTime -= 0.1;
+                if (doubleScoreTime <= 0) {
+                    doubleScore = false;
+                }
+            }
+            
+            // Cập nhật điểm số
             document.getElementById('score').textContent = score;
-            document.getElementById('snakeLength').textContent = snake.length;
             
+            // Cập nhật kỷ lục
             if (score > highScore) {
                 highScore = score;
                 localStorage.setItem('snakeHighScore', highScore);
                 document.getElementById('highScore').textContent = highScore;
             }
             
-            generateFood();
-            generateSpecialFood();
-        } else {
-            // Kiểm tra ăn thức ăn đặc biệt - ĐÃ HACK
-            if (specialFood && head.x === specialFood.x && head.y === specialFood.y) {
-                // ===== HACK ĐIỂM =====
-                if (hackActive) {
-                    score += hackValue;  // +10000 điểm khi hack
-                } else {
-                    score += 20;          // +20 điểm bình thường
-                }
-                // ====================
-                
-                if (specialFood.type === 'speed') {
-                    speedMultiplier = Math.min(speedMultiplier + 0.25, 2);
-                    currentSpeed = Math.max(100, baseSpeed / speedMultiplier);
-                    document.getElementById('speedLevel').textContent = speedMultiplier.toFixed(2);
-                } else {
-                    const lastSegment = snake[snake.length - 1];
-                    snake.push({...lastSegment});
-                    snake.push({...lastSegment});
-                }
-                
-                document.getElementById('score').textContent = score;
-                document.getElementById('snakeLength').textContent = snake.length;
-                
-                if (score > highScore) {
-                    highScore = score;
-                    localStorage.setItem('snakeHighScore', highScore);
-                    document.getElementById('highScore').textContent = highScore;
-                }
-                
-                specialFood = null;
-                generateSpecialFood();
-            } else {
-                snake.pop();
+            draw();
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOverlay').classList.add('active');
+            
+            // Disable controls
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('upBtn').disabled = true;
+            document.getElementById('downBtn').disabled = true;
+            document.getElementById('leftBtn').disabled = true;
+            document.getElementById('rightBtn').disabled = true;
+            
+            if (gameLoop) {
+                clearInterval(gameLoop);
+                gameLoop = null;
             }
         }
         
-        document.getElementById('snakeLength').textContent = snake.length;
-        draw();
-    }
-    
-    function gameOver() {
-        gameRunning = false;
-        document.getElementById('finalScore').textContent = score;
-        document.getElementById('gameOverlay').classList.add('active');
-        
-        document.getElementById('pauseBtn').disabled = true;
-        document.getElementById('upBtn').disabled = true;
-        document.getElementById('downBtn').disabled = true;
-        document.getElementById('leftBtn').disabled = true;
-        document.getElementById('rightBtn').disabled = true;
-        
-        if (gameLoopInterval) {
-            clearInterval(gameLoopInterval);
-            gameLoopInterval = null;
+        function resetGame() {
+            snake = [{x: 10, y: 10}];
+            direction = {x: 0, y: 0};
+            nextDirection = {x: 0, y: 0};
+            score = 0;
+            level = 1;
+            currentSpeed = baseSpeed;
+            speedFood = null;
+            goldenFood = null;
+            doubleScore = false;
+            
+            document.getElementById('score').textContent = '0';
+            document.getElementById('level').textContent = '1';
+            
+            generateFood();
+            draw();
+            
+            gameRunning = false;
+            gamePaused = false;
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('pauseBtn').innerHTML = '⏸ Tạm dừng';
+            document.getElementById('upBtn').disabled = true;
+            document.getElementById('downBtn').disabled = true;
+            document.getElementById('leftBtn').disabled = true;
+            document.getElementById('rightBtn').disabled = true;
+            
+            if (gameLoop) {
+                clearInterval(gameLoop);
+                gameLoop = null;
+            }
         }
-    }
-    
-    function resetGame() {
-        snake = [{x: 10, y: 10}];
-        direction = {x: 0, y: 0};
-        nextDirection = {x: 0, y: 0};
-        score = 0;
-        speedMultiplier = 1;
-        currentSpeed = baseSpeed;
-        specialFood = null;
         
-        document.getElementById('score').textContent = '0';
-        document.getElementById('speedLevel').textContent = '1.00';
-        document.getElementById('snakeLength').textContent = '1';
-        
+        // Khởi tạo
         generateFood();
         draw();
         
-        gameRunning = false;
-        gamePaused = false;
+        // Xử lý phím
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning || gamePaused) return;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    if (direction.y === 0) {
+                        nextDirection = {x: 0, y: -1};
+                    }
+                    e.preventDefault();
+                    break;
+                case 'ArrowDown':
+                    if (direction.y === 0) {
+                        nextDirection = {x: 0, y: 1};
+                    }
+                    e.preventDefault();
+                    break;
+                case 'ArrowLeft':
+                    if (direction.x === 0) {
+                        nextDirection = {x: -1, y: 0};
+                    }
+                    e.preventDefault();
+                    break;
+                case 'ArrowRight':
+                    if (direction.x === 0) {
+                        nextDirection = {x: 1, y: 0};
+                    }
+                    e.preventDefault();
+                    break;
+            }
+        });
         
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('pauseBtn').disabled = true;
-        document.getElementById('pauseBtn').innerHTML = '<span>⏸</span> TẠM DỪNG';
-        document.getElementById('upBtn').disabled = true;
-        document.getElementById('downBtn').disabled = true;
-        document.getElementById('leftBtn').disabled = true;
-        document.getElementById('rightBtn').disabled = true;
-        
-        if (gameLoopInterval) {
-            clearInterval(gameLoopInterval);
-            gameLoopInterval = null;
-        }
-    }
-    
-    // Khởi tạo
-    generateFood();
-    draw();
-    
-    // Xử lý phím
-    document.addEventListener('keydown', (e) => {
-        if (!gameRunning || gamePaused) return;
-        
-        switch(e.key) {
-            case 'ArrowUp':
-                if (direction.y === 0) {
-                    nextDirection = {x: 0, y: -1};
-                }
-                e.preventDefault();
-                break;
-            case 'ArrowDown':
-                if (direction.y === 0) {
-                    nextDirection = {x: 0, y: 1};
-                }
-                e.preventDefault();
-                break;
-            case 'ArrowLeft':
-                if (direction.x === 0) {
-                    nextDirection = {x: -1, y: 0};
-                }
-                e.preventDefault();
-                break;
-            case 'ArrowRight':
-                if (direction.x === 0) {
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if (!gameRunning) {
+                if (nextDirection.x === 0 && nextDirection.y === 0) {
                     nextDirection = {x: 1, y: 0};
                 }
-                e.preventDefault();
-                break;
-        }
-    });
-    
-    // Event listeners
-    document.getElementById('startBtn').addEventListener('click', () => {
-        if (!gameRunning) {
-            if (nextDirection.x === 0 && nextDirection.y === 0) {
+                gameRunning = true;
+                gamePaused = false;
+                
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('pauseBtn').disabled = false;
+                document.getElementById('upBtn').disabled = false;
+                document.getElementById('downBtn').disabled = false;
+                document.getElementById('leftBtn').disabled = false;
+                document.getElementById('rightBtn').disabled = false;
+                
+                if (gameLoop) {
+                    clearInterval(gameLoop);
+                }
+                gameLoop = setInterval(update, currentSpeed);
+            }
+        });
+        
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+                document.getElementById('pauseBtn').innerHTML = gamePaused ? '▶ Tiếp tục' : '⏸ Tạm dừng';
+                
+                if (!gamePaused) {
+                    if (gameLoop) {
+                        clearInterval(gameLoop);
+                    }
+                    gameLoop = setInterval(update, currentSpeed);
+                }
+            }
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            document.getElementById('gameOverlay').classList.remove('active');
+            resetGame();
+        });
+        
+        // Direction pad
+        document.getElementById('upBtn').addEventListener('click', () => {
+            if (gameRunning && !gamePaused && direction.y === 0) {
+                nextDirection = {x: 0, y: -1};
+            }
+        });
+        
+        document.getElementById('downBtn').addEventListener('click', () => {
+            if (gameRunning && !gamePaused && direction.y === 0) {
+                nextDirection = {x: 0, y: 1};
+            }
+        });
+        
+        document.getElementById('leftBtn').addEventListener('click', () => {
+            if (gameRunning && !gamePaused && direction.x === 0) {
+                nextDirection = {x: -1, y: 0};
+            }
+        });
+        
+        document.getElementById('rightBtn').addEventListener('click', () => {
+            if (gameRunning && !gamePaused && direction.x === 0) {
                 nextDirection = {x: 1, y: 0};
             }
-            gameRunning = true;
-            gamePaused = false;
-            
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('pauseBtn').disabled = false;
-            document.getElementById('upBtn').disabled = false;
-            document.getElementById('downBtn').disabled = false;
-            document.getElementById('leftBtn').disabled = false;
-            document.getElementById('rightBtn').disabled = false;
-            
-            if (gameLoopInterval) {
-                clearInterval(gameLoopInterval);
-            }
-            gameLoopInterval = setInterval(update, currentSpeed);
-        }
-    });
-    
-    document.getElementById('pauseBtn').addEventListener('click', () => {
-        if (gameRunning) {
-            gamePaused = !gamePaused;
-            document.getElementById('pauseBtn').innerHTML = gamePaused ? 
-                '<span>▶</span> TIẾP TỤC' : '<span>⏸</span> TẠM DỪNG';
-            
-            if (!gamePaused) {
-                if (gameLoopInterval) {
-                    clearInterval(gameLoopInterval);
-                }
-                gameLoopInterval = setInterval(update, currentSpeed);
-            }
-        }
-    });
-    
-    document.getElementById('resetBtn').addEventListener('click', resetGame);
-    
-    document.getElementById('restartBtn').addEventListener('click', () => {
-        document.getElementById('gameOverlay').classList.remove('active');
-        resetGame();
-    });
-    
-    // Direction pad
-    document.getElementById('upBtn').addEventListener('click', () => {
-        if (gameRunning && !gamePaused && direction.y === 0) {
-            nextDirection = {x: 0, y: -1};
-        }
-    });
-    
-    document.getElementById('downBtn').addEventListener('click', () => {
-        if (gameRunning && !gamePaused && direction.y === 0) {
-            nextDirection = {x: 0, y: 1};
-        }
-    });
-    
-    document.getElementById('leftBtn').addEventListener('click', () => {
-        if (gameRunning && !gamePaused && direction.x === 0) {
-            nextDirection = {x: -1, y: 0};
-        }
-    });
-    
-    document.getElementById('rightBtn').addEventListener('click', () => {
-        if (gameRunning && !gamePaused && direction.x === 0) {
-            nextDirection = {x: 1, y: 0};
-        }
-    });
-                </script>
+        });
+    </script>
+</body>
+</html>
