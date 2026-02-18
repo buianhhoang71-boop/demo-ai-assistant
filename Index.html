@@ -1,678 +1,313 @@
-9<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🐍 SNAKE CLASSIC - Phiên bản đặc biệt</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Kích thước ô
+    const gridSize = 25;
+    const tileCount = canvas.width / gridSize;
+    
+    // Game state
+    let snake = [{x: 10, y: 10}];
+    let direction = {x: 0, y: 0};
+    let nextDirection = {x: 0, y: 0};
+    let food = {};
+    let specialFood = null;
+    let score = 0;
+    let highScore = localStorage.getItem('snakeHighScore') || 0;
+    let gameRunning = false;
+    let gamePaused = false;
+    let gameLoopInterval = null;
+    
+    // Tốc độ
+    let baseSpeed = 200;
+    let currentSpeed = 200;
+    let speedMultiplier = 1;
+    
+    // ===== HACK ĐIỂM =====
+    let hackActive = false;
+    let hackValue = 10000; // Số điểm nhận được khi hack
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'h' || e.key === 'H') {
+            hackActive = !hackActive;
+            alert(`🔓 HACK MODE: ${hackActive ? 'BẬT' : 'TẮT'} - Mỗi lần ăn được +${hackValue} điểm!`);
         }
-
-        body {
-            background: #1a2a3a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 15px;
-        }
-
-        .game-wrapper {
-            max-width: 800px;
-            width: 100%;
-            background: #0f172a;
-            border-radius: 30px;
-            padding: 25px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-            border: 1px solid #334155;
-        }
-
-        .game-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .score-panel {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .score-box, .highscore-box {
-            background: #1e293b;
-            padding: 12px 25px;
-            border-radius: 15px;
-            border: 1px solid #475569;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
-        }
-
-        .score-box {
-            background: linear-gradient(145deg, #2d3b4f, #1e293b);
-        }
-
-        .score-label, .highscore-label {
-            color: #94a3b8;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .score-value, .highscore-value {
-            color: #facc15;
-            font-size: 32px;
-            font-weight: bold;
-            line-height: 1.2;
-        }
-
-        .highscore-box .score-value {
-            color: #c084fc;
-        }
-
-        .stats-panel {
-            background: #1e293b;
-            padding: 12px 20px;
-            border-radius: 50px;
-            border: 1px solid #475569;
-            display: flex;
-            gap: 20px;
-        }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .stat-icon {
-            font-size: 20px;
-        }
-
-        .stat-text {
-            color: #f1f5f9;
-            font-weight: 600;
-        }
-
-        .stat-value {
-            color: #facc15;
-            font-weight: 700;
-            margin-left: 5px;
-        }
-
-        .canvas-container {
-            position: relative;
-            margin-bottom: 20px;
-            border-radius: 20px;
-            overflow: hidden;
-            border: 3px solid #334155;
-            background: #0b1120;
-        }
-
-        #gameCanvas {
-            display: block;
-            width: 100%;
-            height: auto;
-            background: #0b1120;
-        }
-
-        .control-panel {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
-
-        .btn {
-            background: #2d3b4f;
-            border: none;
-            color: white;
-            padding: 12px 30px;
-            border-radius: 50px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            border: 1px solid #475569;
-            box-shadow: 0 5px 0 #1a2533;
-            transition: all 0.1s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 120px;
-            justify-content: center;
-        }
-
-        .btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 1px 0 #1a2533;
-        }
-
-        .btn-primary {
-            background: linear-gradient(145deg, #059669, #047857);
-            border-color: #10b981;
-            box-shadow: 0 5px 0 #065f46;
-        }
-
-        .btn-warning {
-            background: linear-gradient(145deg, #d97706, #b45309);
-            border-color: #f59e0b;
-            box-shadow: 0 5px 0 #92400e;
-        }
-
-        .btn-danger {
-            background: linear-gradient(145deg, #dc2626, #b91c1c);
-            border-color: #ef4444;
-            box-shadow: 0 5px 0 #991b1b;
-        }
-
-        .direction-pad {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            margin-top: 15px;
-        }
-
-        .direction-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        .dir-btn {
-            background: #2d3b4f;
-            border: 1px solid #475569;
-            color: white;
-            width: 70px;
-            height: 70px;
-            border-radius: 20px;
-            font-size: 30px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 5px 0 #1a2533;
-            transition: all 0.1s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .dir-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 1px 0 #1a2533;
-        }
-
-        .dir-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: 0 5px 0 #1a2533;
-        }
-
-        .food-indicator {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 15px;
-        }
-
-        .food-tag {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #1e293b;
-            padding: 8px 15px;
-            border-radius: 50px;
-            border: 1px solid #475569;
-        }
-
-        .food-normal {
-            width: 20px;
-            height: 20px;
-            background: #ef4444;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #ef4444;
-        }
-
-        .food-speed {
-            width: 20px;
-            height: 20px;
-            background: #06b6d4;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #06b6d4;
-        }
-
-        .food-size {
-            width: 20px;
-            height: 20px;
-            background: #eab308;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #eab308;
-        }
-
-        .food-text {
-            color: #cbd5e1;
-            font-size: 14px;
-        }
-
-        .game-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(5px);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .game-overlay.active {
-            display: flex;
-        }
-
-        .overlay-card {
-            background: #1e293b;
-            padding: 40px;
-            border-radius: 30px;
-            text-align: center;
-            border: 1px solid #475569;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-            max-width: 400px;
-            width: 90%;
-        }
-
-        .overlay-card h2 {
-            color: #facc15;
-            font-size: 48px;
-            margin-bottom: 20px;
-            text-shadow: 0 0 20px rgba(250,204,21,0.3);
-        }
-
-        .overlay-card p {
-            color: #e2e8f0;
-            font-size: 24px;
-            margin-bottom: 30px;
-        }
-
-        .overlay-card .btn {
-            min-width: 200px;
-        }
-
-        @media (max-width: 500px) {
-            .game-wrapper {
-                padding: 15px;
+    });
+    // ====================
+    
+    document.getElementById('highScore').textContent = highScore;
+    document.getElementById('snakeLength').textContent = snake.length;
+    
+    // Tạo thức ăn thường
+    function generateFood() {
+        let newFood;
+        let validPosition = false;
+        
+        while (!validPosition) {
+            newFood = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount)
+            };
+            
+            validPosition = true;
+            
+            for (let segment of snake) {
+                if (segment.x === newFood.x && segment.y === newFood.y) {
+                    validPosition = false;
+                    break;
+                }
             }
             
-            .btn {
-                padding: 10px 20px;
-                min-width: 100px;
-                font-size: 14px;
-            }
-            
-            .dir-btn {
-                width: 60px;
-                height: 60px;
-                font-size: 24px;
+            if (specialFood && newFood.x === specialFood.x && newFood.y === specialFood.y) {
+                validPosition = false;
             }
         }
-    </style>
-</head>
-<body>
-    <div class="game-wrapper">
-        <div class="game-header">
-            <div class="score-panel">
-                <div class="score-box">
-                    <div class="score-label">ĐIỂM</div>
-                    <div class="score-value" id="score">0</div>
-                </div>
-                <div class="highscore-box">
-                    <div class="score-label">KỶ LỤC</div>
-                    <div class="score-value" id="highScore">0</div>
-                </div>
-            </div>
-            <div class="stats-panel">
-                <div class="stat-item">
-                    <span class="stat-icon">⚡</span>
-                    <span class="stat-text">Tốc độ:</span>
-                    <span class="stat-value" id="speedLevel">1</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-icon">📏</span>
-                    <span class="stat-text">Dài:</span>
-                    <span class="stat-value" id="snakeLength">1</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="canvas-container">
-            <canvas id="gameCanvas" width="500" height="500"></canvas>
-        </div>
-
-        <div class="food-indicator">
-            <div class="food-tag">
-                <div class="food-normal"></div>
-                <span class="food-text">+10 điểm</span>
-            </div>
-            <div class="food-tag">
-                <div class="food-speed"></div>
-                <span class="food-text">+20 điểm + tốc độ</span>
-            </div>
-            <div class="food-tag">
-                <div class="food-size"></div>
-                <span class="food-text">+20 điểm + dài</span>
-            </div>
-        </div>
-
-        <div class="control-panel">
-            <button class="btn btn-primary" id="startBtn">
-                <span>▶</span> BẮT ĐẦU
-            </button>
-            <button class="btn btn-warning" id="pauseBtn" disabled>
-                <span>⏸</span> TẠM DỪNG
-            </button>
-            <button class="btn btn-danger" id="resetBtn">
-                <span>🔄</span> CHƠI LẠI
-            </button>
-        </div>
-
-        <div class="direction-pad">
-            <div class="direction-row">
-                <button class="dir-btn" id="upBtn" disabled>↑</button>
-            </div>
-            <div class="direction-row">
-                <button class="dir-btn" id="leftBtn" disabled>←</button>
-                <button class="dir-btn" id="downBtn" disabled>↓</button>
-                <button class="dir-btn" id="rightBtn" disabled>→</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="game-overlay" id="gameOverlay">
-        <div class="overlay-card">
-            <h2>GAME OVER</h2>
-            <p>Điểm: <span id="finalScore">0</span></p>
-            <button class="btn btn-primary" id="restartBtn">CHƠI LẠI</button>
-        </div>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
         
-        // Kích thước ô - giảm số ô để dễ chơi hơn
-        const gridSize = 25; // Tăng kích thước ô
-        const tileCount = canvas.width / gridSize;
-        
-        // Game state
-        let snake = [
-            {x: 10, y: 10}
-        ];
-        let direction = {x: 0, y: 0};
-        let nextDirection = {x: 0, y: 0};
-        let food = {};
-        let specialFood = null;
-        let score = 0;
-        let highScore = localStorage.getItem('snakeHighScore') || 0;
-        let gameRunning = false;
-        let gamePaused = false;
-        let gameLoopInterval = null;
-        
-        // Tốc độ - giảm xuống để dễ chơi
-        let baseSpeed = 200; // Tăng thời gian lên 200ms (chậm hơn)
-        let currentSpeed = 200;
-        let speedMultiplier = 1;
-        
-        document.getElementById('highScore').textContent = highScore;
-        document.getElementById('snakeLength').textContent = snake.length;
-        
-        // Tạo thức ăn thường
-        function generateFood() {
-            let newFood;
+        food = newFood;
+    }
+    
+    // Tạo thức ăn đặc biệt
+    function generateSpecialFood() {
+        if (Math.random() < 0.15 && !specialFood) {
+            let newSpecial;
             let validPosition = false;
             
             while (!validPosition) {
-                newFood = {
+                newSpecial = {
                     x: Math.floor(Math.random() * tileCount),
-                    y: Math.floor(Math.random() * tileCount)
+                    y: Math.floor(Math.random() * tileCount),
+                    type: Math.random() < 0.5 ? 'speed' : 'size'
                 };
                 
                 validPosition = true;
                 
-                // Kiểm tra không trùng với rắn
                 for (let segment of snake) {
-                    if (segment.x === newFood.x && segment.y === newFood.y) {
+                    if (segment.x === newSpecial.x && segment.y === newSpecial.y) {
                         validPosition = false;
                         break;
                     }
                 }
                 
-                // Kiểm tra không trùng với thức ăn đặc biệt
-                if (specialFood && newFood.x === specialFood.x && newFood.y === specialFood.y) {
+                if (food.x === newSpecial.x && food.y === newSpecial.y) {
                     validPosition = false;
                 }
             }
             
-            food = newFood;
-        }
-        
-        // Tạo thức ăn đặc biệt
-        function generateSpecialFood() {
-            // 15% cơ hội xuất hiện thức ăn đặc biệt
-            if (Math.random() < 0.15 && !specialFood) {
-                let newSpecial;
-                let validPosition = false;
-                
-                while (!validPosition) {
-                    newSpecial = {
-                        x: Math.floor(Math.random() * tileCount),
-                        y: Math.floor(Math.random() * tileCount),
-                        type: Math.random() < 0.5 ? 'speed' : 'size'
-                    };
-                    
-                    validPosition = true;
-                    
-                    // Kiểm tra không trùng với rắn
-                    for (let segment of snake) {
-                        if (segment.x === newSpecial.x && segment.y === newSpecial.y) {
-                            validPosition = false;
-                            break;
-                        }
-                    }
-                    
-                    // Kiểm tra không trùng với thức ăn thường
-                    if (food.x === newSpecial.x && food.y === newSpecial.y) {
-                        validPosition = false;
-                    }
-                }
-                
-                specialFood = newSpecial;
-                
-                // Tự động biến mất sau 5 giây
-                setTimeout(() => {
-                    specialFood = null;
-                    draw();
-                }, 5000);
-            }
-        }
-        
-        // Vẽ game
-        function draw() {
-            // Xóa canvas
-            ctx.fillStyle = '#0b1120';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            specialFood = newSpecial;
             
-            // Vẽ lưới mờ
-            ctx.strokeStyle = '#1e293b';
-            ctx.lineWidth = 0.5;
-            for (let i = 0; i <= tileCount; i++) {
-                ctx.beginPath();
-                ctx.moveTo(i * gridSize, 0);
-                ctx.lineTo(i * gridSize, canvas.height);
-                ctx.strokeStyle = '#1e293b';
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(0, i * gridSize);
-                ctx.lineTo(canvas.width, i * gridSize);
-                ctx.stroke();
-            }
-            
-            // Vẽ thức ăn thường
-            ctx.shadowColor = '#ef4444';
-            ctx.shadowBlur = 15;
-            ctx.fillStyle = '#ef4444';
+            setTimeout(() => {
+                specialFood = null;
+                draw();
+            }, 5000);
+        }
+    }
+    
+    // Vẽ game
+    function draw() {
+        ctx.fillStyle = '#0b1120';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Vẽ lưới
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i <= tileCount; i++) {
             ctx.beginPath();
-            ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/2 - 3, 0, Math.PI * 2);
+            ctx.moveTo(i * gridSize, 0);
+            ctx.lineTo(i * gridSize, canvas.height);
+            ctx.strokeStyle = '#1e293b';
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(0, i * gridSize);
+            ctx.lineTo(canvas.width, i * gridSize);
+            ctx.stroke();
+        }
+        
+        // Vẽ thức ăn thường
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/2 - 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Vẽ thức ăn đặc biệt
+        if (specialFood) {
+            if (specialFood.type === 'speed') {
+                ctx.fillStyle = '#06b6d4';
+                ctx.shadowColor = '#06b6d4';
+            } else {
+                ctx.fillStyle = '#eab308';
+                ctx.shadowColor = '#eab308';
+            }
+            
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(specialFood.x * gridSize + gridSize/2, specialFood.y * gridSize + gridSize/2, gridSize/2 - 3, 0, Math.PI * 2);
             ctx.fill();
             
-            // Vẽ thức ăn đặc biệt
-            if (specialFood) {
-                if (specialFood.type === 'speed') {
-                    ctx.fillStyle = '#06b6d4';
-                    ctx.shadowColor = '#06b6d4';
-                } else {
-                    ctx.fillStyle = '#eab308';
-                    ctx.shadowColor = '#eab308';
-                }
-                
-                ctx.shadowBlur = 15;
-                ctx.beginPath();
-                ctx.arc(specialFood.x * gridSize + gridSize/2, specialFood.y * gridSize + gridSize/2, gridSize/2 - 3, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Vẽ biểu tượng
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 16px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(specialFood.type === 'speed' ? '⚡' : '⭐', 
-                           specialFood.x * gridSize + gridSize/2, 
-                           specialFood.y * gridSize + gridSize/2);
-            }
-            
-            // Vẽ rắn
-            ctx.shadowBlur = 10;
-            for (let i = 0; i < snake.length; i++) {
-                const segment = snake[i];
-                
-                // Màu sắc gradient
-                if (i === 0) {
-                    // Đầu rắn
-                    ctx.fillStyle = '#22c55e';
-                    ctx.shadowColor = '#22c55e';
-                } else {
-                    // Thân rắn
-                    const gradient = ctx.createLinearGradient(
-                        segment.x * gridSize, 
-                        segment.y * gridSize,
-                        segment.x * gridSize + gridSize, 
-                        segment.y * gridSize + gridSize
-                    );
-                    gradient.addColorStop(0, '#4ade80');
-                    gradient.addColorStop(1, '#16a34a');
-                    ctx.fillStyle = gradient;
-                    ctx.shadowColor = '#4ade80';
-                }
-                
-                // Vẽ thân với góc bo tròn
-                ctx.beginPath();
-                ctx.roundRect(segment.x * gridSize + 2, segment.y * gridSize + 2, 
-                            gridSize - 4, gridSize - 4, 8);
-                ctx.fill();
-                
-                // Vẽ mắt cho đầu rắn
-                if (i === 0) {
-                    ctx.fillStyle = 'white';
-                    ctx.shadowBlur = 0;
-                    
-                    // Mắt trái
-                    ctx.beginPath();
-                    ctx.arc(segment.x * gridSize + gridSize/2 - 5, 
-                           segment.y * gridSize + gridSize/2 - 4, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Mắt phải
-                    ctx.beginPath();
-                    ctx.arc(segment.x * gridSize + gridSize/2 + 5, 
-                           segment.y * gridSize + gridSize/2 - 4, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Con ngươi
-                    ctx.fillStyle = '#0f172a';
-                    ctx.beginPath();
-                    ctx.arc(segment.x * gridSize + gridSize/2 - 5, 
-                           segment.y * gridSize + gridSize/2 - 4, 1.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.beginPath();
-                    ctx.arc(segment.x * gridSize + gridSize/2 + 5, 
-                           segment.y * gridSize + gridSize/2 - 4, 1.5, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-            
             ctx.shadowBlur = 0;
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(specialFood.type === 'speed' ? '⚡' : '⭐', 
+                       specialFood.x * gridSize + gridSize/2, 
+                       specialFood.y * gridSize + gridSize/2);
         }
         
-        // Helper function cho roundRect
-        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
-            if (w < 2 * r) r = w / 2;
-            if (h < 2 * r) r = h / 2;
-            this.moveTo(x + r, y);
-            this.lineTo(x + w - r, y);
-            this.quadraticCurveTo(x + w, y, x + w, y + r);
-            this.lineTo(x + w, y + h - r);
-            this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-            this.lineTo(x + r, y + h);
-            this.quadraticCurveTo(x, y + h, x, y + h - r);
-            this.lineTo(x, y + r);
-            this.quadraticCurveTo(x, y, x + r, y);
-            this.closePath();
-            return this;
-        };
-        
-        // Cập nhật game
-        function update() {
-            if (!gameRunning || gamePaused) return;
+        // Vẽ rắn
+        ctx.shadowBlur = 10;
+        for (let i = 0; i < snake.length; i++) {
+            const segment = snake[i];
             
-            // Cập nhật hướng đi
-            direction = {...nextDirection};
-            
-            // Tính đầu rắn mới
-            const head = {
-                x: snake[0].x + direction.x,
-                y: snake[0].y + direction.y
-            };
-            
-            // Xử lý xuyên tường
-            if (head.x < 0) head.x = tileCount - 1;
-            if (head.x >= tileCount) head.x = 0;
-            if (head.y < 0) head.y = tileCount - 1;
-            if (head.y >= tileCount) head.y = 0;
-            
-            // Kiểm tra va chạm với thân
-            for (let i = 0; i < snake.length; i++) {
-                if (head.x === snake[i].x && head.y === snake[i].y) {
-                    gameOver();
-                    return;
-                }
+            if (i === 0) {
+                ctx.fillStyle = '#22c55e';
+                ctx.shadowColor = '#22c55e';
+            } else {
+                const gradient = ctx.createLinearGradient(
+                    segment.x * gridSize, 
+                    segment.y * gridSize,
+                    segment.x * gridSize + gridSize, 
+                    segment.y * gridSize + gridSize
+                );
+                gradient.addColorStop(0, '#4ade80');
+                gradient.addColorStop(1, '#16a34a');
+                ctx.fillStyle = gradient;
+                ctx.shadowColor = '#4ade80';
             }
             
-            // Thêm đầu mới
-            snake.unshift(head);
+            ctx.beginPath();
+            ctx.roundRect(segment.x * gridSize + 2, segment.y * gridSize + 2, 
+                        gridSize - 4, gridSize - 4, 8);
+            ctx.fill();
             
-            // Kiểm tra ăn thức ăn thường
-            if (head.x === food.x && head.y === food.y) {
-                score += 10;
+            if (i === 0) {
+                ctx.fillStyle = 'white';
+                ctx.shadowBlur = 0;
+                
+                ctx.beginPath();
+                ctx.arc(segment.x * gridSize + gridSize/2 - 5, 
+                       segment.y * gridSize + gridSize/2 - 4, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(segment.x * gridSize + gridSize/2 + 5, 
+                       segment.y * gridSize + gridSize/2 - 4, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(segment.x * gridSize + gridSize/2 - 5, 
+                       segment.y * gridSize + gridSize/2 - 4, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(segment.x * gridSize + gridSize/2 + 5, 
+                       segment.y * gridSize + gridSize/2 - 4, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Vẽ thông báo hack nếu đang bật
+        if (hackActive) {
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = '#facc15';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText('🔓 HACK MODE', canvas.width - 20, 40);
+            ctx.font = 'bold 16px Arial';
+            ctx.fillStyle = '#ef4444';
+            ctx.fillText(`+${hackValue} điểm/mồi`, canvas.width - 20, 70);
+        }
+        
+        ctx.shadowBlur = 0;
+    }
+    
+    // Helper function cho roundRect
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        this.moveTo(x + r, y);
+        this.lineTo(x + w - r, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r);
+        this.lineTo(x + w, y + h - r);
+        this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        this.lineTo(x + r, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r);
+        this.lineTo(x, y + r);
+        this.quadraticCurveTo(x, y, x + r, y);
+        this.closePath();
+        return this;
+    };
+    
+    // Cập nhật game
+    function update() {
+        if (!gameRunning || gamePaused) return;
+        
+        direction = {...nextDirection};
+        
+        const head = {
+            x: snake[0].x + direction.x,
+            y: snake[0].y + direction.y
+        };
+        
+        if (head.x < 0) head.x = tileCount - 1;
+        if (head.x >= tileCount) head.x = 0;
+        if (head.y < 0) head.y = tileCount - 1;
+        if (head.y >= tileCount) head.y = 0;
+        
+        for (let i = 0; i < snake.length; i++) {
+            if (head.x === snake[i].x && head.y === snake[i].y) {
+                gameOver();
+                return;
+            }
+        }
+        
+        snake.unshift(head);
+        
+        // Kiểm tra ăn thức ăn thường - ĐÃ HACK
+        if (head.x === food.x && head.y === food.y) {
+            // ===== HACK ĐIỂM =====
+            if (hackActive) {
+                score += hackValue;  // +10000 điểm khi hack
+            } else {
+                score += 10;          // +10 điểm bình thường
+            }
+            // ====================
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('snakeLength').textContent = snake.length;
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('snakeHighScore', highScore);
+                document.getElementById('highScore').textContent = highScore;
+            }
+            
+            generateFood();
+            generateSpecialFood();
+        } else {
+            // Kiểm tra ăn thức ăn đặc biệt - ĐÃ HACK
+            if (specialFood && head.x === specialFood.x && head.y === specialFood.y) {
+                // ===== HACK ĐIỂM =====
+                if (hackActive) {
+                    score += hackValue;  // +10000 điểm khi hack
+                } else {
+                    score += 20;          // +20 điểm bình thường
+                }
+                // ====================
+                
+                if (specialFood.type === 'speed') {
+                    speedMultiplier = Math.min(speedMultiplier + 0.25, 2);
+                    currentSpeed = Math.max(100, baseSpeed / speedMultiplier);
+                    document.getElementById('speedLevel').textContent = speedMultiplier.toFixed(2);
+                } else {
+                    const lastSegment = snake[snake.length - 1];
+                    snake.push({...lastSegment});
+                    snake.push({...lastSegment});
+                }
+                
                 document.getElementById('score').textContent = score;
                 document.getElementById('snakeLength').textContent = snake.length;
                 
@@ -682,255 +317,170 @@
                     document.getElementById('highScore').textContent = highScore;
                 }
                 
-                generateFood();
+                specialFood = null;
                 generateSpecialFood();
             } else {
-                // Kiểm tra ăn thức ăn đặc biệt
-                if (specialFood && head.x === specialFood.x && head.y === specialFood.y) {
-                    score += 20;
-                    
-                    if (specialFood.type === 'speed') {
-                        speedMultiplier = Math.min(speedMultiplier + 0.25, 2);
-                        currentSpeed = Math.max(100, baseSpeed / speedMultiplier);
-                        document.getElementById('speedLevel').textContent = speedMultiplier.toFixed(2);
-                    } else {
-                        // Thêm 2 đoạn thay vì 1
-                        const lastSegment = snake[snake.length - 1];
-                        snake.push({...lastSegment});
-                        snake.push({...lastSegment});
-                    }
-                    
-                    document.getElementById('score').textContent = score;
-                    document.getElementById('snakeLength').textContent = snake.length;
-                    
-                    if (score > highScore) {
-                        highScore = score;
-                        localStorage.setItem('snakeHighScore', highScore);
-                        document.getElementById('highScore').textContent = highScore;
-                    }
-                    
-                    specialFood = null;
-                    generateSpecialFood();
-                } else {
-                    snake.pop();
-                }
-            }
-            
-            document.getElementById('snakeLength').textContent = snake.length;
-            draw();
-        }
-        
-        function gameOver() {
-            gameRunning = false;
-            document.getElementById('finalScore').textContent = score;
-            document.getElementById('gameOverlay').classList.add('active');
-            
-            // Disable controls
-            document.getElementById('pauseBtn').disabled = true;
-            document.getElementById('upBtn').disabled = true;
-            document.getElementById('downBtn').disabled = true;
-            document.getElementById('leftBtn').disabled = true;
-            document.getElementById('rightBtn').disabled = true;
-            
-            if (gameLoopInterval) {
-                clearInterval(gameLoopInterval);
-                gameLoopInterval = null;
+                snake.pop();
             }
         }
         
-        function resetGame() {
-            snake = [{x: 10, y: 10}];
-            direction = {x: 0, y: 0};
-            nextDirection = {x: 0, y: 0};
-            score = 0;
-            speedMultiplier = 1;
-            currentSpeed = baseSpeed;
-            specialFood = null;
-            
-            document.getElementById('score').textContent = '0';
-            document.getElementById('speedLevel').textContent = '1.00';
-            document.getElementById('snakeLength').textContent = '1';
-            
-            generateFood();
-            draw();
-            
-            gameRunning = false;
-            gamePaused = false;
-            
-            // Enable/disable buttons
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('pauseBtn').disabled = true;
-            document.getElementById('pauseBtn').innerHTML = '<span>⏸</span> TẠM DỪNG';
-            document.getElementById('upBtn').disabled = true;
-            document.getElementById('downBtn').disabled = true;
-            document.getElementById('leftBtn').disabled = true;
-            document.getElementById('rightBtn').disabled = true;
-            
-            if (gameLoopInterval) {
-                clearInterval(gameLoopInterval);
-                gameLoopInterval = null;
-            }
-        }
+        document.getElementById('snakeLength').textContent = snake.length;
+        draw();
+    }
+    
+    function gameOver() {
+        gameRunning = false;
+        document.getElementById('finalScore').textContent = score;
+        document.getElementById('gameOverlay').classList.add('active');
         
-        // Khởi tạo
+        document.getElementById('pauseBtn').disabled = true;
+        document.getElementById('upBtn').disabled = true;
+        document.getElementById('downBtn').disabled = true;
+        document.getElementById('leftBtn').disabled = true;
+        document.getElementById('rightBtn').disabled = true;
+        
+        if (gameLoopInterval) {
+            clearInterval(gameLoopInterval);
+            gameLoopInterval = null;
+        }
+    }
+    
+    function resetGame() {
+        snake = [{x: 10, y: 10}];
+        direction = {x: 0, y: 0};
+        nextDirection = {x: 0, y: 0};
+        score = 0;
+        speedMultiplier = 1;
+        currentSpeed = baseSpeed;
+        specialFood = null;
+        
+        document.getElementById('score').textContent = '0';
+        document.getElementById('speedLevel').textContent = '1.00';
+        document.getElementById('snakeLength').textContent = '1';
+        
         generateFood();
         draw();
         
-        // Xử lý phím
-        document.addEventListener('keydown', (e) => {
-            if (!gameRunning || gamePaused) return;
-            
-            switch(e.key) {
-                case 'ArrowUp':
-                    if (direction.y === 0) {
-                        nextDirection = {x: 0, y: -1};
-                    }
-                    e.preventDefault();
-                    break;
-                case 'ArrowDown':
-                    if (direction.y === 0) {
-                        nextDirection = {x: 0, y: 1};
-                    }
-                    e.preventDefault();
-                    break;
-                case 'ArrowLeft':
-                    if (direction.x === 0) {
-                        nextDirection = {x: -1, y: 0};
-                    }
-                    e.preventDefault();
-                    break;
-                case 'ArrowRight':
-                    if (direction.x === 0) {
-                        nextDirection = {x: 1, y: 0};
-                    }
-                    e.preventDefault();
-                    break;
-            }
-        });
+        gameRunning = false;
+        gamePaused = false;
         
-        // Event listeners cho buttons
-        document.getElementById('startBtn').addEventListener('click', () => {
-            if (!gameRunning) {
-                if (nextDirection.x === 0 && nextDirection.y === 0) {
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('pauseBtn').disabled = true;
+        document.getElementById('pauseBtn').innerHTML = '<span>⏸</span> TẠM DỪNG';
+        document.getElementById('upBtn').disabled = true;
+        document.getElementById('downBtn').disabled = true;
+        document.getElementById('leftBtn').disabled = true;
+        document.getElementById('rightBtn').disabled = true;
+        
+        if (gameLoopInterval) {
+            clearInterval(gameLoopInterval);
+            gameLoopInterval = null;
+        }
+    }
+    
+    // Khởi tạo
+    generateFood();
+    draw();
+    
+    // Xử lý phím
+    document.addEventListener('keydown', (e) => {
+        if (!gameRunning || gamePaused) return;
+        
+        switch(e.key) {
+            case 'ArrowUp':
+                if (direction.y === 0) {
+                    nextDirection = {x: 0, y: -1};
+                }
+                e.preventDefault();
+                break;
+            case 'ArrowDown':
+                if (direction.y === 0) {
+                    nextDirection = {x: 0, y: 1};
+                }
+                e.preventDefault();
+                break;
+            case 'ArrowLeft':
+                if (direction.x === 0) {
+                    nextDirection = {x: -1, y: 0};
+                }
+                e.preventDefault();
+                break;
+            case 'ArrowRight':
+                if (direction.x === 0) {
                     nextDirection = {x: 1, y: 0};
                 }
-                gameRunning = true;
-                gamePaused = false;
-                
-                document.getElementById('startBtn').disabled = true;
-                document.getElementById('pauseBtn').disabled = false;
-                document.getElementById('upBtn').disabled = false;
-                document.getElementById('downBtn').disabled = false;
-                document.getElementById('leftBtn').disabled = false;
-                document.getElementById('rightBtn').disabled = false;
-                
+                e.preventDefault();
+                break;
+        }
+    });
+    
+    // Event listeners
+    document.getElementById('startBtn').addEventListener('click', () => {
+        if (!gameRunning) {
+            if (nextDirection.x === 0 && nextDirection.y === 0) {
+                nextDirection = {x: 1, y: 0};
+            }
+            gameRunning = true;
+            gamePaused = false;
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+            document.getElementById('upBtn').disabled = false;
+            document.getElementById('downBtn').disabled = false;
+            document.getElementById('leftBtn').disabled = false;
+            document.getElementById('rightBtn').disabled = false;
+            
+            if (gameLoopInterval) {
+                clearInterval(gameLoopInterval);
+            }
+            gameLoopInterval = setInterval(update, currentSpeed);
+        }
+    });
+    
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+        if (gameRunning) {
+            gamePaused = !gamePaused;
+            document.getElementById('pauseBtn').innerHTML = gamePaused ? 
+                '<span>▶</span> TIẾP TỤC' : '<span>⏸</span> TẠM DỪNG';
+            
+            if (!gamePaused) {
                 if (gameLoopInterval) {
                     clearInterval(gameLoopInterval);
                 }
                 gameLoopInterval = setInterval(update, currentSpeed);
             }
-        });
-        
-        document.getElementById('pauseBtn').addEventListener('click', () => {
-            if (gameRunning) {
-                gamePaused = !gamePaused;
-                document.getElementById('pauseBtn').innerHTML = gamePaused ? 
-                    '<span>▶</span> TIẾP TỤC' : '<span>⏸</span> TẠM DỪNG';
-                
-                if (!gamePaused) {
-                    if (gameLoopInterval) {
-                        clearInterval(gameLoopInterval);
-                    }
-                    gameLoopInterval = setInterval(update, currentSpeed);
-                }
-            }
-        });
-        
-        document.getElementById('resetBtn').addEventListener('click', resetGame);
-        
-        document.getElementById('restartBtn').addEventListener('click', () => {
-            document.getElementById('gameOverlay').classList.remove('active');
-            resetGame();
-        });
-        
-        // Direction pad
-        document.getElementById('upBtn').addEventListener('click', () => {
-            if (gameRunning && !gamePaused && direction.y === 0) {
-                nextDirection = {x: 0, y: -1};
-            }
-        });
-        
-        document.getElementById('downBtn').addEventListener('click', () => {
-            if (gameRunning && !gamePaused && direction.y === 0) {
-                nextDirection = {x: 0, y: 1};
-            }
-        });
-        
-        document.getElementById('leftBtn').addEventListener('click', () => {
-            if (gameRunning && !gamePaused && direction.x === 0) {
-                nextDirection = {x: -1, y: 0};
-            }
-        });
-        
-        document.getElementById('rightBtn').addEventListener('click', () => {
-            if (gameRunning && !gamePaused && direction.x === 0) {
-                nextDirection = {x: 1, y: 0};
-            }
-        });
-
-        // ===== HACK VÔ HẠN ĐIỂM =====
-// Nhấn phím H để nhận 10000 điểm mỗi khi ăn
-let hackActive = false;
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'h' || e.key === 'H') {
-        hackActive = !hackActive;
-        alert(`🔓 Hack điểm: ${hackActive ? 'BẬT' : 'TẮT'} - Mỗi lần ăn được 10000đ`);
-    }
-});
-
-// Tìm chỗ xử lý ăn thức ăn trong function update()
-// Thêm đoạn code này vào NGAY TRONG phần kiểm tra ăn thức ăn
-
-/* 
-CÁCH GHÉP:
-Tìm trong function update() đoạn code xử lý ăn thức ăn thường:
-
-if (head.x === food.x && head.y === food.y) {
-    score += 10;
-    ...
-}
-
-Sửa thành:
-
-if (head.x === food.x && head.y === food.y) {
-    if (hackActive) {
-        score += 10000;  // Hack: +10000 điểm
-    } else {
-        score += 10;     // Bình thường: +10 điểm
-    }
-    ...
-}
-
-Và đoạn xử lý ăn thức ăn đặc biệt:
-
-if (specialFood && head.x === specialFood.x && head.y === specialFood.y) {
-    score += 20;
-    ...
-}
-
-Sửa thành:
-
-if (specialFood && head.x === specialFood.x && head.y === specialFood.y) {
-    if (hackActive) {
-        score += 10000;  // Hack: +10000 điểm
-    } else {
-        score += 20;     // Bình thường: +20 điểm
-    }
-    ...
-}
-*/
-    </script>
-</body>
-</html>
-
+        }
+    });
+    
+    document.getElementById('resetBtn').addEventListener('click', resetGame);
+    
+    document.getElementById('restartBtn').addEventListener('click', () => {
+        document.getElementById('gameOverlay').classList.remove('active');
+        resetGame();
+    });
+    
+    // Direction pad
+    document.getElementById('upBtn').addEventListener('click', () => {
+        if (gameRunning && !gamePaused && direction.y === 0) {
+            nextDirection = {x: 0, y: -1};
+        }
+    });
+    
+    document.getElementById('downBtn').addEventListener('click', () => {
+        if (gameRunning && !gamePaused && direction.y === 0) {
+            nextDirection = {x: 0, y: 1};
+        }
+    });
+    
+    document.getElementById('leftBtn').addEventListener('click', () => {
+        if (gameRunning && !gamePaused && direction.x === 0) {
+            nextDirection = {x: -1, y: 0};
+        }
+    });
+    
+    document.getElementById('rightBtn').addEventListener('click', () => {
+        if (gameRunning && !gamePaused && direction.x === 0) {
+            nextDirection = {x: 1, y: 0};
+        }
+    });
+                </script>
