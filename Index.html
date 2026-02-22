@@ -3,131 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Rắn Săn Mồi</title>
+    <title>Snake Game - Rắn Săn Mồi</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            user-select: none;
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .game-container {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        .game-wrapper {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 25px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .game-header {
             text-align: center;
+            margin-bottom: 20px;
         }
 
         h1 {
-            color: #333;
-            margin-bottom: 20px;
+            color: #fff;
             font-size: 2.5em;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            text-shadow: 0 0 10px #00ff88;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        .score-panel {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50px;
+            padding: 12px 25px;
+            display: inline-block;
+            border: 2px solid #00ff88;
+        }
+
+        .score-panel span {
+            color: #fff;
+            font-size: 1.3em;
+            margin: 0 10px;
+        }
+
+        .score-panel .score-number {
+            color: #00ff88;
+            font-weight: bold;
+            font-size: 2em;
+            background: rgba(0, 255, 136, 0.2);
+            padding: 5px 15px;
+            border-radius: 30px;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .canvas-container {
+            background: #0a0a1a;
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: inset 0 0 20px rgba(0, 255, 136, 0.3);
         }
 
         canvas {
-            border: 3px solid #333;
-            border-radius: 10px;
-            background: #111;
+            border: 3px solid #00ff88;
+            border-radius: 15px;
+            background: #0f0f1f;
             display: block;
-            margin: 0 auto;
         }
 
-        .score-board {
-            margin: 20px 0;
-            font-size: 1.5em;
-            color: #333;
-        }
-
-        .score-board span {
-            font-weight: bold;
-            color: #667eea;
-            font-size: 1.8em;
-            margin-left: 10px;
-        }
-
-        .controls {
+        .control-panel {
             display: flex;
+            flex-direction: column;
             gap: 15px;
-            justify-content: center;
-            margin-top: 20px;
+            min-width: 150px;
         }
 
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
             color: white;
             border: none;
-            padding: 12px 30px;
+            padding: 15px 25px;
             font-size: 1.1em;
-            border-radius: 50px;
+            border-radius: 15px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
             font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 255, 136, 0.3);
         }
 
-        button:active {
+        .action-btn:active {
             transform: translateY(0);
         }
 
-        .game-over {
-            color: #e74c3c;
+        .direction-panel {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border: 2px solid #00ff88;
+        }
+
+        .direction-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .dir-btn {
+            background: #2a2a4a;
+            color: white;
+            border: 2px solid #00ff88;
+            width: 70px;
+            height: 70px;
+            border-radius: 20px;
+            font-size: 2em;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dir-btn:hover {
+            background: #00ff88;
+            color: #0a0a1a;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px #00ff88;
+        }
+
+        .dir-btn:active {
+            transform: scale(0.95);
+        }
+
+        .game-status {
+            text-align: center;
+            color: #ff4444;
             font-size: 1.3em;
-            margin-top: 15px;
             font-weight: bold;
             min-height: 30px;
+            margin-top: 15px;
+            text-shadow: 0 0 10px red;
         }
 
         .instructions {
-            margin-top: 20px;
-            color: #666;
-            font-size: 1.1em;
-        }
-
-        .instructions p {
-            margin: 5px 0;
+            color: #aaa;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
-    <div class="game-container">
-        <h1>🐍 Rắn Săn Mồi</h1>
-        
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-        
-        <div class="score-board">
-            Điểm: <span id="score">0</span>
+    <div class="game-wrapper">
+        <div class="game-header">
+            <h1>🐍 SNAKE GAME</h1>
+            <div class="score-panel">
+                <span>ĐIỂM</span>
+                <span class="score-number" id="scoreDisplay">0</span>
+            </div>
         </div>
-        
-        <div class="controls">
-            <button id="startBtn">Bắt Đầu</button>
-            <button id="pauseBtn">Tạm Dừng</button>
-            <button id="restartBtn">Chơi Lại</button>
+
+        <div class="game-area">
+            <div class="canvas-container">
+                <canvas id="gameCanvas" width="400" height="400"></canvas>
+            </div>
+
+            <div class="control-panel">
+                <div class="action-buttons">
+                    <button class="action-btn" id="startBtn">▶ BẮT ĐẦU</button>
+                    <button class="action-btn" id="pauseBtn">⏸ TẠM DỪNG</button>
+                    <button class="action-btn" id="restartBtn">↺ CHƠI LẠI</button>
+                </div>
+
+                <div class="direction-panel">
+                    <div class="direction-row">
+                        <button class="dir-btn" id="upBtn">⬆️</button>
+                    </div>
+                    <div class="direction-row">
+                        <button class="dir-btn" id="leftBtn">⬅️</button>
+                        <button class="dir-btn" id="downBtn">⬇️</button>
+                        <button class="dir-btn" id="rightBtn">➡️</button>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div class="game-over" id="gameOver"></div>
-        
+
+        <div class="game-status" id="gameStatus"></div>
         <div class="instructions">
-            <p>🔼 Di chuyển: Phím mũi tên hoặc W A S D</p>
-            <p>🎯 Ăn mồi để tăng điểm và độ dài</p>
-            <p>⚠️ Tránh đâm vào tường và thân của chính mình</p>
+            <span>📱 Dùng nút điều khiển hoặc phím mũi tên / WASD để chơi</span>
         </div>
     </div>
 
@@ -135,104 +226,145 @@
         // Khởi tạo canvas
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreElement = document.getElementById('score');
-        const gameOverElement = document.getElementById('gameOver');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const gameStatus = document.getElementById('gameStatus');
 
         // Kích thước ô
         const gridSize = 20;
         const tileCount = canvas.width / gridSize;
 
         // Biến game
-        let snake = [];
-        let direction = { x: 0, y: 0 };
+        let snake = [
+            {x: 10, y: 10}
+        ];
+        let direction = {x: 0, y: 0};
         let food = {};
         let score = 0;
         let gameRunning = false;
         let gamePaused = false;
-        let gameLoop;
+        let gameInterval;
 
-        // Khởi tạo game
-        function initGame() {
-            snake = [
-                { x: 10, y: 10 }
-            ];
-            direction = { x: 0, y: 0 };
-            score = 0;
-            scoreElement.textContent = score;
-            gameOverElement.textContent = '';
-            generateFood();
-            gameRunning = true;
-            gamePaused = false;
+        // Tạo màu ngẫu nhiên cho mồi
+        function getRandomColor() {
+            const colors = ['#FF5722', '#FF4081', '#FFC107', '#4CAF50', '#9C27B0', '#00BCD4'];
+            return colors[Math.floor(Math.random() * colors.length)];
         }
 
-        // Tạo mồi ngẫu nhiên
+        let foodColor = '#FF5722';
+
+        // Tạo mồi mới
         function generateFood() {
-            do {
+            let validPosition = false;
+            let attempts = 0;
+            
+            while (!validPosition && attempts < 100) {
                 food = {
                     x: Math.floor(Math.random() * tileCount),
                     y: Math.floor(Math.random() * tileCount)
                 };
-            } while (snake.some(segment => segment.x === food.x && segment.y === food.y));
+                
+                validPosition = !snake.some(segment => segment.x === food.x && segment.y === food.y);
+                attempts++;
+            }
+            
+            foodColor = getRandomColor();
         }
 
         // Vẽ game
         function draw() {
             // Xóa canvas
-            ctx.fillStyle = '#111';
+            ctx.fillStyle = '#0f0f1f';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Vẽ lưới mờ
+            ctx.strokeStyle = '#1f1f3f';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < tileCount; i++) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#2a2a4a';
+                ctx.lineWidth = 0.3;
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
+            }
 
             // Vẽ rắn
             snake.forEach((segment, index) => {
+                const x = segment.x * gridSize;
+                const y = segment.y * gridSize;
+                
                 if (index === 0) {
                     // Đầu rắn
-                    ctx.fillStyle = '#4CAF50';
-                    ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
+                    ctx.fillStyle = '#00ff88';
+                    ctx.shadowColor = '#00ff88';
+                    ctx.shadowBlur = 15;
+                    ctx.fillRect(x + 2, y + 2, gridSize - 4, gridSize - 4);
                     
                     // Vẽ mắt
                     ctx.fillStyle = 'white';
-                    if (direction.x === 1) { // Phải
-                        ctx.fillRect(segment.x * gridSize + 12, segment.y * gridSize + 5, 4, 4);
-                        ctx.fillRect(segment.x * gridSize + 12, segment.y * gridSize + 11, 4, 4);
-                    } else if (direction.x === -1) { // Trái
-                        ctx.fillRect(segment.x * gridSize + 4, segment.y * gridSize + 5, 4, 4);
-                        ctx.fillRect(segment.x * gridSize + 4, segment.y * gridSize + 11, 4, 4);
-                    } else if (direction.y === 1) { // Xuống
-                        ctx.fillRect(segment.x * gridSize + 5, segment.y * gridSize + 12, 4, 4);
-                        ctx.fillRect(segment.x * gridSize + 11, segment.y * gridSize + 12, 4, 4);
-                    } else if (direction.y === -1) { // Lên
-                        ctx.fillRect(segment.x * gridSize + 5, segment.y * gridSize + 4, 4, 4);
-                        ctx.fillRect(segment.x * gridSize + 11, segment.y * gridSize + 4, 4, 4);
+                    ctx.shadowBlur = 5;
+                    if (direction.x === 1) {
+                        ctx.fillRect(x + 12, y + 5, 4, 4);
+                        ctx.fillRect(x + 12, y + 11, 4, 4);
+                    } else if (direction.x === -1) {
+                        ctx.fillRect(x + 4, y + 5, 4, 4);
+                        ctx.fillRect(x + 4, y + 11, 4, 4);
+                    } else if (direction.y === 1) {
+                        ctx.fillRect(x + 5, y + 12, 4, 4);
+                        ctx.fillRect(x + 11, y + 12, 4, 4);
+                    } else if (direction.y === -1) {
+                        ctx.fillRect(x + 5, y + 4, 4, 4);
+                        ctx.fillRect(x + 11, y + 4, 4, 4);
+                    } else {
+                        ctx.fillRect(x + 8, y + 5, 4, 4);
+                        ctx.fillRect(x + 8, y + 11, 4, 4);
                     }
                 } else {
                     // Thân rắn
-                    ctx.fillStyle = '#8BC34A';
-                    ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
+                    const gradient = ctx.createLinearGradient(x, y, x + gridSize, y + gridSize);
+                    gradient.addColorStop(0, '#4CAF50');
+                    gradient.addColorStop(1, '#2E7D32');
+                    ctx.fillStyle = gradient;
+                    ctx.shadowBlur = 8;
+                    ctx.fillRect(x + 2, y + 2, gridSize - 4, gridSize - 4);
                 }
             });
 
             // Vẽ mồi
-            ctx.fillStyle = '#FF5722';
+            ctx.shadowColor = foodColor;
+            ctx.shadowBlur = 20;
             ctx.beginPath();
             ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
+            ctx.fillStyle = foodColor;
             ctx.fill();
+            
+            // Reset shadow
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'transparent';
         }
 
-        // Cập nhật vị trí
+        // Cập nhật game
         function update() {
             if (!gameRunning || gamePaused) return;
 
-            // Di chuyển đầu rắn
-            const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+            // Tính đầu rắn mới
+            const head = {
+                x: snake[0].x + direction.x,
+                y: snake[0].y + direction.y
+            };
 
             // Kiểm tra va chạm tường
             if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
-                gameOver();
+                gameOver('Tường');
                 return;
             }
 
             // Kiểm tra va chạm thân
-            if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
-                gameOver();
+            if (snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y)) {
+                gameOver('Thân');
                 return;
             }
 
@@ -242,19 +374,19 @@
             // Kiểm tra ăn mồi
             if (head.x === food.x && head.y === food.y) {
                 score += 10;
-                scoreElement.textContent = score;
+                scoreDisplay.textContent = score;
                 generateFood();
             } else {
-                // Bỏ đuôi nếu không ăn mồi
+                // Xóa đuôi
                 snake.pop();
             }
         }
 
         // Game over
-        function gameOver() {
+        function gameOver(reason) {
             gameRunning = false;
-            clearInterval(gameLoop);
-            gameOverElement.textContent = '💀 GAME OVER! Điểm của bạn: ' + score;
+            clearInterval(gameInterval);
+            gameStatus.innerHTML = `💀 GAME OVER! Bạn đã đâm vào ${reason}! - Điểm: ${score}`;
         }
 
         // Vòng lặp game
@@ -263,51 +395,113 @@
             draw();
         }
 
-        // Xử lý phím điều khiển
+        // Bắt đầu game
+        function startGame() {
+            if (!gameRunning) {
+                initGame();
+                if (gameInterval) clearInterval(gameInterval);
+                gameInterval = setInterval(gameTick, 100);
+                gameStatus.innerHTML = '🎮 Đang chơi...';
+            } else if (gamePaused) {
+                gamePaused = false;
+                gameStatus.innerHTML = '🎮 Đang chơi...';
+            }
+        }
+
+        // Khởi tạo game
+        function initGame() {
+            snake = [{x: 10, y: 10}];
+            direction = {x: 1, y: 0}; // Bắt đầu di chuyển sang phải
+            score = 0;
+            scoreDisplay.textContent = score;
+            gameRunning = true;
+            gamePaused = false;
+            generateFood();
+            gameStatus.innerHTML = '🎮 Đang chơi...';
+        }
+
+        // Tạm dừng
+        function pauseGame() {
+            if (gameRunning) {
+                gamePaused = !gamePaused;
+                gameStatus.innerHTML = gamePaused ? '⏸ Tạm dừng' : '🎮 Đang chơi...';
+            }
+        }
+
+        // Chơi lại
+        function restartGame() {
+            initGame();
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(gameTick, 100);
+        }
+
+        // Xử lý phím bàn phím
         document.addEventListener('keydown', (e) => {
             if (!gameRunning || gamePaused) return;
 
             const key = e.key.toLowerCase();
             
-            // Ngăn chặn di chuyển ngược chiều
-            if ((key === 'arrowup' || key === 'w') && direction.y === 0) {
-                direction = { x: 0, y: -1 };
-            } else if ((key === 'arrowdown' || key === 's') && direction.y === 0) {
-                direction = { x: 0, y: 1 };
-            } else if ((key === 'arrowleft' || key === 'a') && direction.x === 0) {
-                direction = { x: -1, y: 0 };
-            } else if ((key === 'arrowright' || key === 'd') && direction.x === 0) {
-                direction = { x: 1, y: 0 };
+            switch(key) {
+                case 'arrowup':
+                case 'w':
+                    if (direction.y === 0) {
+                        direction = {x: 0, y: -1};
+                    }
+                    break;
+                case 'arrowdown':
+                case 's':
+                    if (direction.y === 0) {
+                        direction = {x: 0, y: 1};
+                    }
+                    break;
+                case 'arrowleft':
+                case 'a':
+                    if (direction.x === 0) {
+                        direction = {x: -1, y: 0};
+                    }
+                    break;
+                case 'arrowright':
+                case 'd':
+                    if (direction.x === 0) {
+                        direction = {x: 1, y: 0};
+                    }
+                    break;
             }
         });
 
-        // Nút Bắt Đầu
-        document.getElementById('startBtn').addEventListener('click', () => {
-            if (!gameRunning) {
-                initGame();
-                if (gameLoop) clearInterval(gameLoop);
-                gameLoop = setInterval(gameTick, 100);
+        // Xử lý nút điều khiển trên màn hình
+        document.getElementById('upBtn').addEventListener('click', () => {
+            if (gameRunning && !gamePaused && direction.y === 0) {
+                direction = {x: 0, y: -1};
             }
         });
 
-        // Nút Tạm Dừng
-        document.getElementById('pauseBtn').addEventListener('click', () => {
-            if (gameRunning) {
-                gamePaused = !gamePaused;
-                document.getElementById('pauseBtn').textContent = gamePaused ? 'Tiếp Tục' : 'Tạm Dừng';
+        document.getElementById('downBtn').addEventListener('click', () => {
+            if (gameRunning && !gamePaused && direction.y === 0) {
+                direction = {x: 0, y: 1};
             }
         });
 
-        // Nút Chơi Lại
-        document.getElementById('restartBtn').addEventListener('click', () => {
-            initGame();
-            if (gameLoop) clearInterval(gameLoop);
-            gameLoop = setInterval(gameTick, 100);
+        document.getElementById('leftBtn').addEventListener('click', () => {
+            if (gameRunning && !gamePaused && direction.x === 0) {
+                direction = {x: -1, y: 0};
+            }
         });
 
-        // Khởi tạo game lần đầu
-        initGame();
+        document.getElementById('rightBtn').addEventListener('click', () => {
+            if (gameRunning && !gamePaused && direction.x === 0) {
+                direction = {x: 1, y: 0};
+            }
+        });
+
+        // Nút action
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+        document.getElementById('restartBtn').addEventListener('click', restartGame);
+
+        // Vẽ màn hình chờ
         draw();
+        gameStatus.innerHTML = '👆 Nhấn BẮT ĐẦU để chơi';
     </script>
 </body>
 </html>
