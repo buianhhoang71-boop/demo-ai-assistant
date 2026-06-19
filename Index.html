@@ -386,7 +386,7 @@
         function gameOver(reason) {
             gameRunning = false;
             clearInterval(gameInterval);
-            gameStatus.innerHTML = `💀 GAME OVER! Bạn đã đâm vào ${reason}! - Điểm: ${score}`;
+            gameStatus.textContent = `💀 GAME OVER! Bạn đã đâm vào ${reason}! - Điểm: ${score}`;
         }
 
         // Vòng lặp game

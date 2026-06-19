@@ -17,6 +17,7 @@ from htbuilder import div, styles
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 import datetime
+import os
 import textwrap
 import time
 
@@ -61,7 +62,10 @@ CORTEX_URL = (
 
 GITHUB_URL = "https://github.com/streamlit/streamlit-assistant"
 
-DEBUG_MODE = st.query_params.get("debug", "false").lower() == "true"
+DEBUG_MODE = (
+    os.environ.get("STREAMLIT_DEBUG", "false").lower() == "true"
+    and st.query_params.get("debug", "false").lower() == "true"
+)
 
 INSTRUCTIONS = textwrap.dedent("""
     - You are a helpful AI chat assistant focused on answering quesions about
@@ -436,7 +440,8 @@ if user_message:
             if time_diff < MIN_TIME_BETWEEN_REQUESTS:
                 time.sleep(time_diff.seconds + time_diff.microseconds * 0.001)
 
-            user_message = user_message.replace("'", "")
+            # Limit input length to prevent abuse
+            user_message = user_message[:2000]
 
         # Build a detailed prompt.
         if DEBUG_MODE:
