@@ -83,64 +83,50 @@
 
     <h2 id="resultText">Chào mừng đến với thế giới của Halo Maidens!</h2>
 
+    <script src="shared/canvas-utils.js"></script>
+    <script src="shared/gacha.js"></script>
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        
-        // Vị trí và kích thước nhân vật
+        const { canvas, ctx } = initCanvas("gameCanvas");
+
         const charWidth = 60;
         const charHeight = 90;
-        const charSpacing = 100; // Khoảng cách giữa 2 nhân vật
+        const charSpacing = 100;
 
         let maleCharX = (canvas.width / 2) - charWidth - (charSpacing / 2);
         let femaleCharX = (canvas.width / 2) + (charSpacing / 2);
         let charY = (canvas.height / 2) - (charHeight / 2);
 
-        // Vẽ 2 nhân vật khởi đầu
         function drawCharacters(maleColor, femaleColor) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Xóa canvas cũ
+            clearCanvas(ctx, canvas, "#0d0d1a");
 
-            // Vẽ nhân vật nam (hình vuông tạm thời)
-            ctx.fillStyle = maleColor; // Màu xanh đậm
+            ctx.fillStyle = maleColor;
             ctx.fillRect(maleCharX, charY, charWidth, charHeight);
-            
-            // Vẽ nhân vật nữ (hình tròn tạm thời)
-            ctx.fillStyle = femaleColor; // Màu hồng/tím
+
+            ctx.fillStyle = femaleColor;
             ctx.beginPath();
             ctx.arc(femaleCharX + (charWidth / 2), charY + (charHeight / 2), charWidth / 2, 0, Math.PI * 2);
             ctx.fill();
 
-            // Vẽ tên tạm thời
             ctx.fillStyle = "white";
             ctx.font = "16px Arial";
             ctx.textAlign = "center";
-            ctx.fillText("Anh hùng Nam", maleCharX + charWidth / 2, charY + charHeight + 20);
-            ctx.fillText("Thiếu nữ Nữ", femaleCharX + charWidth / 2, charY + charHeight + 20);
+            ctx.fillText("Anh h\u00f9ng Nam", maleCharX + charWidth / 2, charY + charHeight + 20);
+            ctx.fillText("Thi\u1ebfu n\u1eef N\u1eef", femaleCharX + charWidth / 2, charY + charHeight + 20);
         }
 
-        // Logic quay Gacha cơ bản
+        const FEMALE_COLORS = { SSR: "gold", SR: "#00ffff", R: "gray" };
+
         function quayGacha() {
-            const rate = Math.random() * 100;
-            const res = document.getElementById("resultText");
-            
-            if (rate <= 5) { // 5% trúng SSR
-                res.innerText = "⭐ SSR: Thiếu nữ Ánh Sáng mới!";
-                res.style.color = "gold";
-                // Khi trúng SSR, có thể làm gì đó với nhân vật (ví dụ đổi màu, vẽ hình khác)
-                drawCharacters("#3366ff", "gold"); // Cập nhật màu cho đẹp
-            } else if (rate <= 25) { // 20% trúng SR
-                res.innerText = "✨ SR: Chiến binh Gió mới!";
-                res.style.color = "#00ffff"; // Màu xanh ngọc
-                drawCharacters("#3366ff", "#00ffff");
-            } else { // 75% trúng R
-                res.innerText = "👟 R: Lính thường!";
-                res.style.color = "#e0e0e0";
-                drawCharacters("#3366ff", "gray");
-            }
+            const result = rollGacha({ sr: 25 });
+            displayGachaResult("resultText", result.tier, {
+                SSR: { text: "\u2b50 SSR: Thi\u1ebfu n\u1eef \u00c1nh S\u00e1ng m\u1edbi!", color: "gold" },
+                SR:  { text: "\u2728 SR: Chi\u1ebfn binh Gi\u00f3 m\u1edbi!",            color: "#00ffff" },
+                R:   { text: "\ud83d\udc5f R: L\u00ednh th\u01b0\u1eddng!",             color: "#e0e0e0" },
+            });
+            drawCharacters("#3366ff", FEMALE_COLORS[result.tier]);
         }
 
-        // Khởi tạo trạng thái ban đầu
-        drawCharacters("#3366ff", "#ff69b4"); // Nam xanh, Nữ hồng
+        drawCharacters("#3366ff", "#ff69b4");
     </script>
 </body>
 </html>

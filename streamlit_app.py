@@ -27,6 +27,12 @@ from snowflake.cortex import complete
 
 st.set_page_config(page_title="Streamlit AI assistant", page_icon="✨")
 
+
+def get_state(key):
+    """Returns a truthy session state value, or None if unset/empty."""
+    return st.session_state.get(key) or None
+
+
 # -----------------------------------------------------------------------------
 # Set things up.
 
@@ -217,50 +223,55 @@ def history_to_text(chat_history):
     return "\n".join(f"[{h['role']}]: {h['content']}" for h in chat_history)
 
 
-def search_relevant_pages(query):
-    """Searches the markdown contents of Streamlit's documentation."""
+def search_cortex(service_name, query, columns, result_formatter, filter_spec=None, limit=10):
+    """Searches a Cortex search service and returns formatted results.
+
+    Args:
+        service_name: Name of the Cortex search service.
+        query: The search query string.
+        columns: List of column names to retrieve.
+        result_formatter: Callable that takes (index, row) and returns a string.
+        filter_spec: Optional filter dict for the search.
+        limit: Max number of results to return.
+    """
     cortex_search_service = (
-        root.databases[DB].schemas[SCHEMA].cortex_search_services[PAGES_SEARCH_SERVICE]
+        root.databases[DB].schemas[SCHEMA].cortex_search_services[service_name]
     )
 
     context_documents = cortex_search_service.search(
         query,
-        columns=["PAGE_URL", "PAGE_CHUNK"],
-        filter={},
-        limit=PAGES_CONTEXT_LEN,
+        columns=columns,
+        filter=filter_spec or {},
+        limit=limit,
     )
 
-    results = context_documents.results
+    return "\n".join(
+        result_formatter(i, row)
+        for i, row in enumerate(context_documents.results)
+    )
 
-    context = [f"[{row['PAGE_URL']}]: {row['PAGE_CHUNK']}" for row in results]
-    context_str = "\n".join(context)
 
-    return context_str
+def search_relevant_pages(query):
+    """Searches the markdown contents of Streamlit's documentation."""
+    return search_cortex(
+        service_name=PAGES_SEARCH_SERVICE,
+        query=query,
+        columns=["PAGE_URL", "PAGE_CHUNK"],
+        result_formatter=lambda _i, row: f"[{row['PAGE_URL']}]: {row['PAGE_CHUNK']}",
+        limit=PAGES_CONTEXT_LEN,
+    )
 
 
 def search_relevant_docstrings(query):
     """Searches the docstrings of Streamlit's commands."""
-    cortex_search_service = (
-        root.databases[DB]
-        .schemas[SCHEMA]
-        .cortex_search_services[DOCSTRINGS_SEARCH_SERVICE]
-    )
-
-    context_documents = cortex_search_service.search(
-        query,
+    return search_cortex(
+        service_name=DOCSTRINGS_SEARCH_SERVICE,
+        query=query,
         columns=["STREAMLIT_VERSION", "COMMAND_NAME", "DOCSTRING_CHUNK"],
-        filter={"@eq": {"STREAMLIT_VERSION": "latest"}},
+        result_formatter=lambda i, row: f"[Document {i}]: {row['DOCSTRING_CHUNK']}",
+        filter_spec={"@eq": {"STREAMLIT_VERSION": "latest"}},
         limit=DOCSTRINGS_CONTEXT_LEN,
     )
-
-    results = context_documents.results
-
-    context = [
-        f"[Document {i}]: {row['DOCSTRING_CHUNK']}" for i, row in enumerate(results)
-    ]
-    context_str = "\n".join(context)
-
-    return context_str
 
 
 def get_response(prompt):
@@ -340,21 +351,10 @@ with title_row:
         width="stretch",
     )
 
-user_just_asked_initial_question = (
-    "initial_question" in st.session_state and st.session_state.initial_question
-)
-
-user_just_clicked_suggestion = (
-    "selected_suggestion" in st.session_state and st.session_state.selected_suggestion
-)
-
-user_first_interaction = (
-    user_just_asked_initial_question or user_just_clicked_suggestion
-)
-
-has_message_history = (
-    "messages" in st.session_state and len(st.session_state.messages) > 0
-)
+user_just_asked_initial_question = bool(get_state("initial_question"))
+user_just_clicked_suggestion = bool(get_state("selected_suggestion"))
+user_first_interaction = user_just_asked_initial_question or user_just_clicked_suggestion
+has_message_history = bool(get_state("messages"))
 
 # Show a different UI when the user hasn't asked a question yet.
 if not user_first_interaction and not has_message_history:
