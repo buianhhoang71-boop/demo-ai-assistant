@@ -17,12 +17,15 @@ from htbuilder import div, styles
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 import datetime
+import logging
 import textwrap
 import time
 
 import streamlit as st
 from snowflake.core import Root
 from snowflake.cortex import complete
+
+logger = logging.getLogger(__name__)
 
 
 st.set_page_config(page_title="Streamlit AI assistant", page_icon="✨")
@@ -33,10 +36,24 @@ st.set_page_config(page_title="Streamlit AI assistant", page_icon="✨")
 
 @st.cache_resource(ttl="5m")
 def get_session():
-    return st.connection("snowflake").session()
+    try:
+        return st.connection("snowflake").session()
+    except Exception as e:
+        logger.error("Failed to connect to Snowflake: %s", e)
+        raise ConnectionError(
+            "Could not establish a Snowflake connection. "
+            "Please verify your credentials in .streamlit/secrets.toml."
+        ) from e
 
 
-root = Root(get_session())
+try:
+    root = Root(get_session())
+except ConnectionError:
+    st.error(
+        "Failed to connect to Snowflake. "
+        "Please check your connection settings in `.streamlit/secrets.toml`."
+    )
+    st.stop()
 executor = ThreadPoolExecutor(max_workers=5)
 
 MODEL = "claude-3-5-sonnet"
@@ -184,15 +201,18 @@ def build_question_prompt(question):
             )
         )
 
-    results = executor.map(
-        lambda task_info: TaskResult(
-            name=task_info.name,
-            result=task_info.function(*task_info.args),
-        ),
-        task_infos,
-    )
+    futures = [
+        executor.submit(task_info.function, *task_info.args)
+        for task_info in task_infos
+    ]
 
-    context = {name: result for name, result in results}
+    context = {}
+    for task_info, future in zip(task_infos, futures):
+        try:
+            context[task_info.name] = future.result()
+        except Exception as e:
+            logger.error("Task '%s' failed: %s", task_info.name, e)
+            context[task_info.name] = None
 
     return build_prompt(
         instructions=INSTRUCTIONS,
@@ -209,7 +229,11 @@ def generate_chat_summary(messages):
         conversation=history_to_text(messages),
     )
 
-    return complete(MODEL, prompt, session=get_session())
+    try:
+        return complete(MODEL, prompt, session=get_session())
+    except Exception as e:
+        logger.error("Failed to generate chat summary: %s", e)
+        return None
 
 
 def history_to_text(chat_history):
@@ -219,63 +243,77 @@ def history_to_text(chat_history):
 
 def search_relevant_pages(query):
     """Searches the markdown contents of Streamlit's documentation."""
-    cortex_search_service = (
-        root.databases[DB].schemas[SCHEMA].cortex_search_services[PAGES_SEARCH_SERVICE]
-    )
+    try:
+        cortex_search_service = (
+            root.databases[DB]
+            .schemas[SCHEMA]
+            .cortex_search_services[PAGES_SEARCH_SERVICE]
+        )
 
-    context_documents = cortex_search_service.search(
-        query,
-        columns=["PAGE_URL", "PAGE_CHUNK"],
-        filter={},
-        limit=PAGES_CONTEXT_LEN,
-    )
+        context_documents = cortex_search_service.search(
+            query,
+            columns=["PAGE_URL", "PAGE_CHUNK"],
+            filter={},
+            limit=PAGES_CONTEXT_LEN,
+        )
 
-    results = context_documents.results
+        results = context_documents.results
 
-    context = [f"[{row['PAGE_URL']}]: {row['PAGE_CHUNK']}" for row in results]
-    context_str = "\n".join(context)
-
-    return context_str
+        context = [f"[{row['PAGE_URL']}]: {row['PAGE_CHUNK']}" for row in results]
+        return "\n".join(context)
+    except Exception as e:
+        logger.error("Failed to search documentation pages: %s", e)
+        return None
 
 
 def search_relevant_docstrings(query):
     """Searches the docstrings of Streamlit's commands."""
-    cortex_search_service = (
-        root.databases[DB]
-        .schemas[SCHEMA]
-        .cortex_search_services[DOCSTRINGS_SEARCH_SERVICE]
-    )
+    try:
+        cortex_search_service = (
+            root.databases[DB]
+            .schemas[SCHEMA]
+            .cortex_search_services[DOCSTRINGS_SEARCH_SERVICE]
+        )
 
-    context_documents = cortex_search_service.search(
-        query,
-        columns=["STREAMLIT_VERSION", "COMMAND_NAME", "DOCSTRING_CHUNK"],
-        filter={"@eq": {"STREAMLIT_VERSION": "latest"}},
-        limit=DOCSTRINGS_CONTEXT_LEN,
-    )
+        context_documents = cortex_search_service.search(
+            query,
+            columns=["STREAMLIT_VERSION", "COMMAND_NAME", "DOCSTRING_CHUNK"],
+            filter={"@eq": {"STREAMLIT_VERSION": "latest"}},
+            limit=DOCSTRINGS_CONTEXT_LEN,
+        )
 
-    results = context_documents.results
+        results = context_documents.results
 
-    context = [
-        f"[Document {i}]: {row['DOCSTRING_CHUNK']}" for i, row in enumerate(results)
-    ]
-    context_str = "\n".join(context)
-
-    return context_str
+        context = [
+            f"[Document {i}]: {row['DOCSTRING_CHUNK']}"
+            for i, row in enumerate(results)
+        ]
+        return "\n".join(context)
+    except Exception as e:
+        logger.error("Failed to search docstrings: %s", e)
+        return None
 
 
 def get_response(prompt):
-    return complete(
-        MODEL,
-        prompt,
-        stream=True,
-        session=get_session(),
-    )
+    try:
+        return complete(
+            MODEL,
+            prompt,
+            stream=True,
+            session=get_session(),
+        )
+    except Exception as e:
+        logger.error("Failed to get LLM response: %s", e)
+        raise RuntimeError(
+            "Unable to generate a response. The AI service may be temporarily "
+            "unavailable. Please try again."
+        ) from e
 
 
 def send_telemetry(**kwargs):
     """Records some telemetry about questions being asked."""
     # TODO: Implement this.
-    pass
+    logger.debug("Telemetry not yet implemented. Data: %s", kwargs)
 
 
 def show_feedback_controls(message_index):
@@ -299,7 +337,11 @@ def show_feedback_controls(message_index):
 
             if st.form_submit_button("Send feedback"):
                 # TODO: Submit feedback here!
-                pass
+                logger.info(
+                    "Feedback received (rating=%s) but submission is not yet implemented.",
+                    rating,
+                )
+                st.warning("Feedback submission is not yet available. Thank you for trying!")
 
 
 @st.dialog("Legal disclaimer")
@@ -434,34 +476,46 @@ if user_message:
             st.session_state.prev_question_timestamp = question_timestamp
 
             if time_diff < MIN_TIME_BETWEEN_REQUESTS:
-                time.sleep(time_diff.seconds + time_diff.microseconds * 0.001)
+                time.sleep(time_diff.total_seconds())
 
             user_message = user_message.replace("'", "")
 
-        # Build a detailed prompt.
-        if DEBUG_MODE:
-            with st.status("Computing prompt...") as status:
-                full_prompt = build_question_prompt(user_message)
-                st.code(full_prompt)
-                status.update(label="Prompt computed")
-        else:
-            with st.spinner("Researching..."):
-                full_prompt = build_question_prompt(user_message)
+        try:
+            # Build a detailed prompt.
+            if DEBUG_MODE:
+                with st.status("Computing prompt...") as status:
+                    full_prompt = build_question_prompt(user_message)
+                    st.code(full_prompt)
+                    status.update(label="Prompt computed")
+            else:
+                with st.spinner("Researching..."):
+                    full_prompt = build_question_prompt(user_message)
 
-        # Send prompt to LLM.
-        with st.spinner("Thinking..."):
-            response_gen = get_response(full_prompt)
+            # Send prompt to LLM.
+            with st.spinner("Thinking..."):
+                response_gen = get_response(full_prompt)
 
-        # Put everything after the spinners in a container to fix the
-        # ghost message bug.
-        with st.container():
-            # Stream the LLM response.
-            response = st.write_stream(response_gen)
+            # Put everything after the spinners in a container to fix the
+            # ghost message bug.
+            with st.container():
+                # Stream the LLM response.
+                response = st.write_stream(response_gen)
 
-            # Add messages to chat history.
-            st.session_state.messages.append({"role": "user", "content": user_message})
-            st.session_state.messages.append({"role": "assistant", "content": response})
+                # Add messages to chat history.
+                st.session_state.messages.append(
+                    {"role": "user", "content": user_message}
+                )
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": response}
+                )
 
-            # Other stuff.
-            show_feedback_controls(len(st.session_state.messages) - 1)
-            send_telemetry(question=user_message, response=response)
+                # Other stuff.
+                show_feedback_controls(len(st.session_state.messages) - 1)
+                send_telemetry(question=user_message, response=response)
+
+        except Exception as e:
+            logger.error("Error processing question: %s", e)
+            st.error(
+                "Something went wrong while generating a response. "
+                "Please try again or restart the conversation."
+            )
