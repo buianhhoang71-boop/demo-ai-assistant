@@ -222,10 +222,10 @@
         </div>
     </div>
 
+    <script src="shared/canvas-utils.js"></script>
+    <script src="shared/input-handler.js"></script>
     <script>
-        // Khởi tạo canvas
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        const { canvas, ctx } = initCanvas('gameCanvas');
         const scoreDisplay = document.getElementById('scoreDisplay');
         const gameStatus = document.getElementById('gameStatus');
 
@@ -272,9 +272,7 @@
 
         // Vẽ game
         function draw() {
-            // Xóa canvas
-            ctx.fillStyle = '#0f0f1f';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            clearCanvas(ctx, canvas, '#0f0f1f');
 
             // Vẽ lưới mờ
             ctx.strokeStyle = '#1f1f3f';
@@ -435,64 +433,18 @@
             gameInterval = setInterval(gameTick, 100);
         }
 
-        // Xử lý phím bàn phím
-        document.addEventListener('keydown', (e) => {
+        function trySetDirection(dx, dy) {
             if (!gameRunning || gamePaused) return;
+            if (dx !== 0 && direction.x === 0) direction = {x: dx, y: 0};
+            if (dy !== 0 && direction.y === 0) direction = {x: 0, y: dy};
+        }
 
-            const key = e.key.toLowerCase();
-            
-            switch(key) {
-                case 'arrowup':
-                case 'w':
-                    if (direction.y === 0) {
-                        direction = {x: 0, y: -1};
-                    }
-                    break;
-                case 'arrowdown':
-                case 's':
-                    if (direction.y === 0) {
-                        direction = {x: 0, y: 1};
-                    }
-                    break;
-                case 'arrowleft':
-                case 'a':
-                    if (direction.x === 0) {
-                        direction = {x: -1, y: 0};
-                    }
-                    break;
-                case 'arrowright':
-                case 'd':
-                    if (direction.x === 0) {
-                        direction = {x: 1, y: 0};
-                    }
-                    break;
-            }
-        });
+        registerArrowKeys(trySetDirection);
 
-        // Xử lý nút điều khiển trên màn hình
-        document.getElementById('upBtn').addEventListener('click', () => {
-            if (gameRunning && !gamePaused && direction.y === 0) {
-                direction = {x: 0, y: -1};
-            }
-        });
-
-        document.getElementById('downBtn').addEventListener('click', () => {
-            if (gameRunning && !gamePaused && direction.y === 0) {
-                direction = {x: 0, y: 1};
-            }
-        });
-
-        document.getElementById('leftBtn').addEventListener('click', () => {
-            if (gameRunning && !gamePaused && direction.x === 0) {
-                direction = {x: -1, y: 0};
-            }
-        });
-
-        document.getElementById('rightBtn').addEventListener('click', () => {
-            if (gameRunning && !gamePaused && direction.x === 0) {
-                direction = {x: 1, y: 0};
-            }
-        });
+        document.getElementById('upBtn').addEventListener('click',    () => trySetDirection( 0, -1));
+        document.getElementById('downBtn').addEventListener('click',  () => trySetDirection( 0,  1));
+        document.getElementById('leftBtn').addEventListener('click',  () => trySetDirection(-1,  0));
+        document.getElementById('rightBtn').addEventListener('click', () => trySetDirection( 1,  0));
 
         // Nút action
         document.getElementById('startBtn').addEventListener('click', startGame);

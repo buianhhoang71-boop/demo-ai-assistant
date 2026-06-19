@@ -8,32 +8,32 @@
         <p id="ketqua" style="color:white; font-family:sans-serif; font-size:20px;"></p>
     </div>
 
+    <script src="shared/canvas-utils.js"></script>
+    <script src="shared/gacha.js"></script>
+    <script src="shared/input-handler.js"></script>
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        let x = 175, y = 175; // Vị trí hình vuông
+        const { canvas, ctx } = initCanvas("gameCanvas");
+        let x = 175, y = 175;
 
         function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "cyan"; // Nhân vật tạm thời là hình vuông xanh
+            clearCanvas(ctx, canvas, "#000");
+            ctx.fillStyle = "cyan";
             ctx.fillRect(x, y, 50, 50);
             requestAnimationFrame(draw);
         }
 
         function quayGacha() {
-            const tiLe = Math.random() * 100;
-            const thongBao = document.getElementById("ketqua");
-            if (tiLe <= 5) thongBao.innerText = "⭐ SSR: SIÊU HIẾM!";
-            else if (tiLe <= 20) thongBao.innerText = "✨ SR: HIẾM";
-            else thongBao.innerText = "👟 R: THƯỜNG";
+            const result = rollGacha();
+            displayGachaResult("ketqua", result.tier, {
+                SSR: { text: "\u2b50 SSR: SI\u00caU HI\u1ebeM!", color: "gold" },
+                SR:  { text: "\u2728 SR: HI\u1ebeM",            color: "#00ffff" },
+                R:   { text: "\ud83d\udc5f R: TH\u01af\u1edcNG", color: "#e0e0e0" },
+            });
         }
 
-        // Di chuyển bằng phím (nếu bạn dùng bàn phím)
-        window.addEventListener("keydown", (e) => {
-            if(e.key === "ArrowUp") y -= 10;
-            if(e.key === "ArrowDown") y += 10;
-            if(e.key === "ArrowLeft") x -= 10;
-            if(e.key === "ArrowRight") x += 10;
+        registerArrowKeys(function (dx, dy) {
+            x += dx * 10;
+            y += dy * 10;
         });
 
         draw();
